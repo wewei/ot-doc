@@ -17,6 +17,5 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/wewei/ot-doc/tree/main/packages/%40ot-doc/list"
-  },
-  "private": true
+  }
 }
