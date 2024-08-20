@@ -1,0 +1,19 @@
+{
+  "name": "@ot-doc/list",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/@ot-doc/list/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/@ot-doc/list",
+        "main": "packages/@ot-doc/list/src/index.ts",
+        "tsConfig": "packages/@ot-doc/list/tsconfig.lib.json",
+        "assets": ["packages/@ot-doc/list/*.md"]
+      }
+    }
+  }
+}
