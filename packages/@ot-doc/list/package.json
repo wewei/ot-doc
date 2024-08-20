@@ -7,5 +7,16 @@
   "type": "commonjs",
   "main": "./src/index.js",
   "typings": "./src/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "Wei Wei",
+    "email": "lyweiwei@outlook.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wewei/ot-doc/tree/main/packages/%40ot-doc/list"
+  },
   "private": true
 }
