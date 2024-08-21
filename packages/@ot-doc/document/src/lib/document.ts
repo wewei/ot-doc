@@ -1,28 +1,28 @@
-import { identity } from "lodash";
+import { identity, isUndefined, mapValues, mergeWith } from "lodash";
 
 // A complete document model is an algebric groupoid plus a transform operator.
 // A groupoid is consists of
 //    * A set G
-//    * A unary operator, inverse (^)
+//    * A unary operator, inverse (~)
 //    * A partial binary operator compose (*)
 //
 // The Transform is
 //    * A paritial binary operator transform (/)
 //
-// Notation: DocumentModel => <G, ^, *, />
+// Notation: DocumentModel => <G, ~, *, />
 //                         where
-//                            ^ ∈     G  -> G
+//                            ~ ∈     G  -> G
 //                            * ∈ <G, G> ~> G
 //                            / ∈ <G, G> ~> G
 //
 // The following rules are required:
 // AP : ∀ a, b, c ∈ G → (a * b) * c = a * (b * c)
-// IP1: ∀ a, b ∈ G ∧ <a, b> ∈ dom(*) → a * b * ^b = a ∧ ^a * a * b = b
+// IP1: ∀ a, b ∈ G ∧ <a, b> ∈ dom(*) → a * b * ~b = a ∧ ~a * a * b = b
 // CP1: ∀ a, b ∈ G ∧ <a, b> ∈ dom(/) →
 //      <a, b / a>, <b, a / b> ∈ dom(*) ∧ a * (b / a) = b * (a / b)
 //
 // The following rules are optional:
-// IP2: ∀ a, b ∈ G → a / b / ^b = a
+// IP2: ∀ a, b ∈ G → a / b / ~b = a
 // CP2: ∀ a, b, c ∈ G → (a / b) / (c / b) = (a / c) / (b / c)
 //
 // Models conforming to IP2 & CP2 can be used in decentralized OT systems
@@ -49,17 +49,17 @@ export type DocumentModel<G> = Groupoid<G> & {
 // An algebric group consists of
 //    * A set G
 //    * An identity element 1
-//    * A unary operator, inverse (^)
+//    * A unary operator, inverse (~)
 //    * A binary operator compose (*) 
-// Notation: GroupModel<G> => <G, 1, ^, *>
+// Notation: GroupModel<G> => <G, 1, ~, *>
 //                         where
 //                            1 ∈           G
-//                            ^ ∈     G  -> G
+//                            ~ ∈     G  -> G
 //                            * ∈ <G, G> -> G
 // The following rules are required
 // AP : ∀ a, b, c ∈ G → (a * b) * c = a * (b * c)
 // IDP: ∀ a ∈ G → a * 1 = 1 * a = a
-// IP : ∀ a ∈ G → a * ^a = ^a * a = 1
+// IP : ∀ a ∈ G → a * ~a = ~a * a = 1
 //
 // If the (*) also conforms to the communtative rule, it's an abelian group
 // COP: ∀ a, b ∈ G → a * b = b * a
@@ -75,14 +75,14 @@ export type GroupModel<G> = {
 //  Document AP  <- Group AP
 //  Document IP1:
 //    ∀ a, b ∈ G.
-//      a * b * ^b = a * 1 = a
-//      a * ^a * b = 1 * b = b
+//      a * b * ~b = a * 1 = a
+//      a * ~a * b = 1 * b = b
 //  Document CP1
 //    ∀ a, b ∈ G.
 //      a * (b / a) = a * b = b * a = b * (a / b)
 //  Document IP2:
 //    ∀ a, b ∈ G.
-//      a / b / ^b = a / b = a
+//      a / b / ~b = a / b = a
 //  Document CP2:
 //    ∀ a, b, c ∈ G.
 //      (a / b) / (c / b) = a = (a / c) / (b / c)
@@ -126,6 +126,10 @@ export type EqModel<S> = {
   equals: (a: S, b: S) => boolean;
 };
 
+export const primitiveEq = {
+  equals: <P>(a: P, b: P) => a === b
+};
+
 export type OrderedModel<S> = {
   lessThan: (a: S, b: S) => boolean;
 };
@@ -136,6 +140,11 @@ export const eqFromOrdered = <S>({
   equals: (a, b) => !lessThan(a, b) && !lessThan(b, a),
 });
 
+export const primitiveOrder = {
+  lessThan: <P>(a: P, b: P) => a < b,
+};
+
+
 export type Pair<S> = [S, S];
 
 export const pairGroupoid = <S>({ equals }: EqModel<S>): Groupoid<Pair<S>> => ({
@@ -143,10 +152,12 @@ export const pairGroupoid = <S>({ equals }: EqModel<S>): Groupoid<Pair<S>> => ({
   compose: ([fromA, toA], [fromB, toB]) => equals(toA, fromB) ? [fromA, toB] : null,
 });
 
+export type GwwDocument<S> = DocumentModel<Pair<S>>;
+
 export const gwwDocument = <S>(
   { lessThan }: OrderedModel<S>,
-  { equals } : EqModel<S> = eqFromOrdered({ lessThan }),
-): DocumentModel<Pair<S>> => {
+  { equals }: EqModel<S> = eqFromOrdered({ lessThan })
+): GwwDocument<S> => {
   const { inverse, compose } = pairGroupoid({ equals });
   return {
     inverse,
@@ -160,11 +171,66 @@ export const gwwDocument = <S>(
 // timestamp first
 export type Timestamped<S> = [number, S];
 
+export type LwwDocument<S> = GwwDocument<Timestamped<S>>;
+
 export const lwwDocument = <S>(
   { lessThan }: OrderedModel<S>,
   { equals }: EqModel<S> = eqFromOrdered({ lessThan })
-): DocumentModel<Pair<Timestamped<S>>> =>
+): LwwDocument<S> =>
   gwwDocument(
     { lessThan: ([tA, vA], [tB, vB]) => tA < tB || (tA === tB && vA < vB) },
     { equals: ([tA, vA], [tB, vB]) => tA === tB && equals(vA, vB) }
   );
+
+// Typical GWW documents
+const gwwPrimitive = gwwDocument(primitiveOrder, primitiveEq);
+export const gwwNumber = gwwPrimitive as GwwDocument<number>;
+export const gwwString = gwwPrimitive as GwwDocument<string>;
+export const gwwBoolean = gwwPrimitive as GwwDocument<boolean>;
+
+// Typical LWW documents
+const lwwPrimitive = lwwDocument(primitiveOrder, primitiveEq);
+export const lwwNumber = lwwPrimitive as LwwDocument<number>;
+export const lwwString = lwwPrimitive as LwwDocument<string>;
+export const lwwBoolean = lwwPrimitive as LwwDocument<boolean>;
+
+// Given a document <G, ~, *, /> and a set S, we can define a power document
+// over set S ^ G. Where
+// ~x    = { <e, ~x(e)> | e ∈ S }
+// x * y = { <e, x(e) * y(e)> | e ∈ S }
+// x / y = { <e, x(e) / y(e)> | e ∈ S }
+// Prove
+//  Document AP:
+//    ∀ a, b, c ∈ G.
+//    (a * b) * c = { <e, a(e) * b(e)> | e ∈ S } * c
+//                = { <e, (a(e) * b(e)) * c(e) | e ∈ S }
+//                = { <e, a(e) * (b(e) * c(e)) | e ∈ S }
+//                = a * { <e, b(e) * c(e)> | e ∈ S }
+//                = a * (b * c)
+//  Document IP1:
+//    ∀ a, b ∈ G.
+//      a * b * ~b = { <e, a(e) * b(e)> | e ∈ S } * { <e, ~b(e)> | e ∈ S }
+//                 = { <e, a(e) * b(e) * ~b(e)> | e ∈ S }
+//                 = { <e, a(e)> | e ∈ S }
+//                 = a
+//      a * ~a * b = { <e, a(e)> | e ∈ S } * { <e, ~a(e)> | e ∈ S } * b
+//                 = { <e, a(e) * ~a(e)> | e ∈ S } * { <e, b(e)> | e ∈ S }
+//                 = { <e, a(e) * ~a(e) * b(e)> | e ∈ S }
+//                 = { <e, b(e)> | e ∈ S }
+//                 = b
+//  Document CP1
+//    ∀ a, b ∈ G.
+//      a * (b / a) = { <e, a(e) * (b(e) / a(e))> | e ∈ S }
+//                  = { <e, b(e) * (a(e) / b(e))> | e ∈ S }
+//                  = b * (a / b)
+//
+// In practical, we use a special power document, where S is always string,
+// then we can represent S ^ G with a Record<string, G> plus a default value
+// export const recordDocument = <S>(
+//   defaultValue: S,
+//   { inverse, compose, transform }: DocumentModel<S>
+// ): DocumentModel<Record<string, S>> => ({
+//   inverse: (a) => mapValues(a, inverse),
+//   compose: (a, b) => mergeWith({ ...a }, b, (x, y) => compose(x ?? defaultValue, y)),
+//   transform:
+// });
