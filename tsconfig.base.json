@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@ot-doc/document": ["packages/@ot-doc/document/src/index.ts"],
       "@ot-doc/list": ["packages/@ot-doc/list/src/index.ts"]
     }
   },
