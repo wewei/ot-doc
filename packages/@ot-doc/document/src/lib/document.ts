@@ -247,7 +247,7 @@ export const optionalDocument = <G>({
 
 
 // Given a document <G, ~, *, /> and a set S, we can define a power document
-// over set G ^ S. Where
+// over set G ^ S. where
 // ~x    = { <e, ~x(e)> | e ∈ S }
 // x * y = { <e, x(e) * y(e)> | e ∈ S }
 // x / y = { <e, x(e) / y(e)> | e ∈ S }
@@ -303,4 +303,57 @@ export const recordDocument = <G>(
   inverse: (a) => mapValues(a, inverse),
   compose: recordLift(compose),
   transform: recordLift(transform),
+});
+
+// Given 2 documents <G, ~[G], *[G], /[G]> and <H, ~[H], *[H], /[H]>, we can
+// define a product document over set <G ∪ { ι }, H ∪ { ι }>, where
+// ~<x, y> = <~[G]x, ~[H]y>  (x ∈ G, y ∈ H)
+// ~<ι, y> = <    ι, ~[H]y>  (y ∈ H)
+// ~<x, ι> = <~[G]x,     ι>  (x ∈ G)
+// 
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DocumentTuple<G extends Record<string, any>> = {
+  [K in keyof G]: DocumentModel<G[K]>;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyDocumentTuple = DocumentTuple<Record<string, any>>;
+type OpOfDocumentTuple<Tp> = Partial<{
+  [K in keyof Tp]: Tp[K] extends DocumentModel<infer V> ? V : never;
+}>;
+type DocumentModelFromTuple<Tp> = DocumentModel<OpOfDocumentTuple<Tp>>;
+
+const tupleLift =
+  <Tp extends AnyDocumentTuple>(
+    documentTuple: Tp,
+    method: 'compose' | 'transform'
+  ) =>
+  (
+    a: OpOfDocumentTuple<Tp>,
+    b: OpOfDocumentTuple<Tp>
+  ): OpOfDocumentTuple<Tp> | undefined =>
+    Object.keys(b).reduce(
+      (c, k: keyof Tp) => {
+        if (c) {
+          if (k in c) {
+            const v = documentTuple[k][method](c[k], b[k]);
+            if (v === undefined) {
+              return undefined;
+            } else {
+              c[k] = v;
+            }
+          }
+        }
+        return c;
+      },
+      { ...a } as OpOfDocumentTuple<Tp> | undefined
+    );
+
+export const tupleDocument = <Tp extends AnyDocumentTuple>(
+  documentTuple: Tp
+): DocumentModelFromTuple<Tp> => ({
+  inverse: (a) => mapValues(a, (v, k) => documentTuple[k].inverse(v)),
+  compose: tupleLift(documentTuple, "compose"),
+  transform: tupleLift(documentTuple, "transform"),
 });
