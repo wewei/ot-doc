@@ -1,4 +1,4 @@
-import { identity, isUndefined, mapValues, mergeWith } from "lodash";
+import { identity, isUndefined, mapValues } from "lodash";
 
 // A complete document model is an algebric groupoid plus a transform operator.
 // A groupoid is consists of
@@ -26,6 +26,9 @@ import { identity, isUndefined, mapValues, mergeWith } from "lodash";
 // CP2: ∀ a, b, c ∈ G → (a / b) / (c / b) = (a / c) / (b / c)
 //
 // Models conforming to IP2 & CP2 can be used in decentralized OT systems
+//
+// In practical, we use `undefined` in JavaScript to explicitly represent the
+// result of a * b where <a, b> ∉ dom(*), or a / b where <a, b> ∉ dom(/)
 export type Groupoid<G> = {
   // Given 1 operation a, return the inverse operation
   inverse: (a: G) => G;
@@ -34,7 +37,7 @@ export type Groupoid<G> = {
   // operators c. Note, the compose operator is a partial operation, it's not
   // neccessary for all <a, b> ∈ <G, G> to have a composition.
   // Notation: a * b = c
-  compose: (a: G, b: G) => G | null;
+  compose: (a: G, b: G) => G | undefined;
 };
 
 export type DocumentModel<G> = Groupoid<G> & {
@@ -42,7 +45,7 @@ export type DocumentModel<G> = Groupoid<G> & {
   // transformation result of a, say a', where a' applies on the state after b,
   // with the same effect as a, considering the impact of b.
   // Notation: a / b = a'
-  transform: (a: G, b: G) => G | null;
+  transform: (a: G, b: G) => G | undefined;
 };
 
 
@@ -149,7 +152,7 @@ export type Pair<S> = [S, S];
 
 export const pairGroupoid = <S>({ equals }: EqModel<S>): Groupoid<Pair<S>> => ({
   inverse: ([from, to]) => [to, from],
-  compose: ([fromA, toA], [fromB, toB]) => equals(toA, fromB) ? [fromA, toB] : null,
+  compose: ([fromA, toA], [fromB, toB]) => equals(toA, fromB) ? [fromA, toB] : undefined,
 });
 
 export type GwwDocument<S> = DocumentModel<Pair<S>>;
@@ -194,12 +197,61 @@ export const lwwNumber = lwwPrimitive as LwwDocument<number>;
 export const lwwString = lwwPrimitive as LwwDocument<string>;
 export const lwwBoolean = lwwPrimitive as LwwDocument<boolean>;
 
+// Given a document <G, ~, *, /> and an element ι ∉ G, we can define an optional
+// document over the G ∪ { ι }
+// ~ι    = ι
+// ~x    = ~[G]x (x ∈ G)
+// x * ι = ι * x = x
+// x * y = x *[G] y (x, y ∈ G)
+// x / ι = x
+// ι / x = ι
+// x / y = x /[G] y (x, y ∈ G)
+// Prove:
+//  Document AP:
+//    ∀ a, b, c ∈ G.
+//    obviousely, (a * b) * c = a * (b * c)
+//    ∀ a, b ∈ G ∪ {ι}.
+//    (a * b) * ι = a * b = a * (b * ι)
+//    (a * ι) * b = a * b = a * (ι * b)
+//    (ι * a) * b = a * b = ι * (a * b)
+//  Document IP1:
+//    ∀ a, b ∈ G.
+//    obviousely, a * b * ~b = a, a * ~a * b = b
+//    ∀ a ∈ G ∪ {ι}.
+//    a * ι * ~ι = a * ι * ι = a
+//    ι * ~ι * a = ι * ι * a = a
+//  Document CP1:
+//    ∀ a, b ∈ G.
+//    obviousely, a * (b / a) = b * (a / b)
+//    ∀ a ∈ G ∪ {ι}.
+//    a * (ι / a) = a * ι = a
+//    ι * (a / ι) = ι * a = a
+//
+// In practical, we can use `null` in JavaScript to represent ι
+// Note, we need to make sure whenever we use the `optionalDocument` over a
+// type G, make sure `null` is not included in that type.
+// BTW, applying `optionalDocument` multiple times isn't a problem, because
+// the behavior of `null` is consistant. But if G contains `null`, and the
+// behavior of `inverse`, `compose`, `transform` over `null` is different from
+// thosed defined in the previous construction, the `optionalDocument(...)` may
+// not be a wellformed document.
+export const optionalDocument = <G>({
+  inverse,
+  compose,
+  transform,
+}: DocumentModel<G>): DocumentModel<G | null> => ({
+  inverse: (a) => (a === null ? null : inverse(a)),
+  compose: (a, b) => (a === null ? b : b === null ? a : compose(a, b)),
+  transform: (a, b) => (a === null ? null : b === null ? a : transform(a, b)),
+});
+
+
 // Given a document <G, ~, *, /> and a set S, we can define a power document
-// over set S ^ G. Where
+// over set G ^ S. Where
 // ~x    = { <e, ~x(e)> | e ∈ S }
 // x * y = { <e, x(e) * y(e)> | e ∈ S }
 // x / y = { <e, x(e) / y(e)> | e ∈ S }
-// Prove
+// Prove:
 //  Document AP:
 //    ∀ a, b, c ∈ G.
 //    (a * b) * c = { <e, a(e) * b(e)> | e ∈ S } * c
@@ -225,12 +277,30 @@ export const lwwBoolean = lwwPrimitive as LwwDocument<boolean>;
 //                  = b * (a / b)
 //
 // In practical, we use a special power document, where S is always string,
-// then we can represent S ^ G with a Record<string, G> plus a default value
-// export const recordDocument = <S>(
-//   defaultValue: S,
-//   { inverse, compose, transform }: DocumentModel<S>
-// ): DocumentModel<Record<string, S>> => ({
-//   inverse: (a) => mapValues(a, inverse),
-//   compose: (a, b) => mergeWith({ ...a }, b, (x, y) => compose(x ?? defaultValue, y)),
-//   transform:
-// });
+// then we can represent (G ∪ { ι }) ^ S with a Record<string, G>.
+// In this implementation, for all key not defined in the record, we assume
+// they're mapped to ι.
+
+const recordLift = <G>(f: (x: G, y: G) => G | undefined) =>
+  (a: Record<string, G>, b: Record<string, G>): Record<string, G> | undefined => Object.keys(b).reduce((c, k) => {
+    if (c) {
+      if (k in c) {
+        const v = f(c[k], b[k]);
+        if (v === undefined) {
+          return undefined;
+        }
+        else {
+          c[k] = v;
+        }
+      }
+    }
+    return c;
+  }, { ...a } as Record<string, G> | undefined);
+
+export const recordDocument = <G>(
+  { inverse, compose, transform }: DocumentModel<G>
+): DocumentModel<Record<string, G>> => ({
+  inverse: (a) => mapValues(a, inverse),
+  compose: recordLift(compose),
+  transform: recordLift(transform),
+});
