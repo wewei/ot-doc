@@ -1,4 +1,4 @@
-import { identity, isUndefined, mapValues } from "lodash";
+import { identity, mapValues } from "lodash";
 
 // A complete document model is an algebric groupoid plus a transform operator.
 // A groupoid is consists of

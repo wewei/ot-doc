@@ -16,7 +16,6 @@
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
     "@types/jest": "^29.5.12",
-    "@types/lodash": "^4.17.7",
     "@types/node": "18.16.9",
     "@typescript-eslint/eslint-plugin": "^7.16.0",
     "@typescript-eslint/parser": "^7.16.0",
