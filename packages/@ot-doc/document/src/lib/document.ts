@@ -1,5 +1,8 @@
 import { identity, mapValues } from "lodash";
 
+// Partial Binary Operator
+type Pbo<G> = (a: G, b: G) => G | undefined;
+
 // A complete document model is an algebric groupoid plus a transform operator.
 // A groupoid is consists of
 //    * A set G
@@ -37,7 +40,7 @@ export type Groupoid<G> = {
   // operators c. Note, the compose operator is a partial operation, it's not
   // neccessary for all <a, b> ∈ <G, G> to have a composition.
   // Notation: a * b = c
-  compose: (a: G, b: G) => G | undefined;
+  compose: Pbo<G>;
 };
 
 export type DocumentModel<G> = Groupoid<G> & {
@@ -45,7 +48,7 @@ export type DocumentModel<G> = Groupoid<G> & {
   // transformation result of a, say a', where a' applies on the state after b,
   // with the same effect as a, considering the impact of b.
   // Notation: a / b = a'
-  transform: (a: G, b: G) => G | undefined;
+  transform: Pbo<G>
 };
 
 
@@ -106,9 +109,9 @@ export const numberSumDocument = abelianDocument(numberSumGroup);
 
 // Pair groupoid over a total ordered set infers a Greatest Write Win document,
 // where
-//  <m, x> / <m, y> = <y, max(x, y)>
-//  dom(*) = <<x, m>, <m, y>>
-//  dom(/) = <<m, x>, <m, y>>
+//    <m, x> / <m, y> = <y, max(x, y)>
+//    dom(*) = <<x, m>, <m, y>>
+//    dom(/) = <<m, x>, <m, y>>
 //
 // Prove
 //  AP and IP1 are already implied by the definition of the pair groupoid
@@ -199,13 +202,13 @@ export const lwwBoolean = lwwPrimitive as LwwDocument<boolean>;
 
 // Given a document <G, ~, *, /> and an element ι ∉ G, we can define an optional
 // document over the G ∪ { ι }
-// ~ι    = ι
-// ~x    = ~[G]x (x ∈ G)
-// x * ι = ι * x = x
-// x * y = x *[G] y (x, y ∈ G)
-// x / ι = x
-// ι / x = ι
-// x / y = x /[G] y (x, y ∈ G)
+//    ~ι    = ι
+//    ~x    = ~[G]x (x ∈ G)
+//    x * ι = ι * x = x
+//    x * y = x *[G] y (x, y ∈ G)
+//    x / ι = x
+//    ι / x = ι
+//    x / y = x /[G] y (x, y ∈ G)
 // Prove:
 //  Document AP:
 //    ∀ a, b, c ∈ G.
@@ -245,12 +248,33 @@ export const optionalDocument = <G>({
   transform: (a, b) => (a === null ? null : b === null ? a : transform(a, b)),
 });
 
+const liftPbo =
+  <G extends Record<string, unknown>>(
+    getFunc: (key: keyof G) => Pbo<G[typeof key]>
+  ): Pbo<G> =>
+  (a, b) =>
+    Object.keys(b).reduce(
+      (c, k: keyof G) => {
+        if (c) {
+          if (k in c) {
+            const v = getFunc(k)(c[k], b[k]);
+            if (v === undefined) {
+              return undefined;
+            } else {
+              c[k] = v;
+            }
+          }
+        }
+        return c;
+      },
+      { ...a } as G | undefined
+    );
 
 // Given a document <G, ~, *, /> and a set S, we can define a power document
 // over set G ^ S. where
-// ~x    = { <e, ~x(e)> | e ∈ S }
-// x * y = { <e, x(e) * y(e)> | e ∈ S }
-// x / y = { <e, x(e) / y(e)> | e ∈ S }
+//    ~x    = { <e,       ~x(e)> | e ∈ S }
+//    x * y = { <e, x(e) * y(e)> | e ∈ S }
+//    x / y = { <e, x(e) / y(e)> | e ∈ S }
 // Prove:
 //  Document AP:
 //    ∀ a, b, c ∈ G.
@@ -281,39 +305,56 @@ export const optionalDocument = <G>({
 // In this implementation, for all key not defined in the record, we assume
 // they're mapped to ι.
 
-const recordLift = <G>(f: (x: G, y: G) => G | undefined) =>
-  (a: Record<string, G>, b: Record<string, G>): Record<string, G> | undefined => Object.keys(b).reduce((c, k) => {
-    if (c) {
-      if (k in c) {
-        const v = f(c[k], b[k]);
-        if (v === undefined) {
-          return undefined;
-        }
-        else {
-          c[k] = v;
-        }
-      }
-    }
-    return c;
-  }, { ...a } as Record<string, G> | undefined);
+const recordLift = <G>(f: Pbo<G>): Pbo<Record<string, G>> => liftPbo(() => f);
 
-export const recordDocument = <G>(
-  { inverse, compose, transform }: DocumentModel<G>
-): DocumentModel<Record<string, G>> => ({
+export const recordDocument = <G>({
+  inverse,
+  compose,
+  transform,
+}: DocumentModel<G>): DocumentModel<Record<string, G>> => ({
   inverse: (a) => mapValues(a, inverse),
   compose: recordLift(compose),
   transform: recordLift(transform),
 });
 
-// Given 2 documents <G, ~[G], *[G], /[G]> and <H, ~[H], *[H], /[H]>, we can
-// define a product document over set <G ∪ { ι }, H ∪ { ι }>, where
-// ~<x, y> = <~[G]x, ~[H]y>  (x ∈ G, y ∈ H)
-// ~<ι, y> = <    ι, ~[H]y>  (y ∈ H)
-// ~<x, ι> = <~[G]x,     ι>  (x ∈ G)
-// 
+// Given 2 documents <G, ~[G], *[G], /[G]>, <H, ~[H], *[H], /[H]>, we can define
+// a product document over set <G, H>, where
+//    ~<x, y>         = <   ~[G]x,    ~[H]y>
+//    <x, y> * <z, w> = <x *[G] z, y *[H] w>
+//    <x, y> / <z, w> = <x /[G] z, y /[H] w>
+//
+// Prove:
+//  Document AP:
+//    ∀ ax, bx, cx ∈ G, ay, by, cy ∈ H.
+//      (<ax, ay> * <bx, by>) * <cx, cy>
+//    = <ax *[G] bx, ay *[H] by> * <cx, cy>
+//    = <(ax *[G] bx) *[G] cx, (ay *[H] by) *[H] cy>
+//    = <ax *[G] (bx *[G] cx), ay *[H] (by *[H] cy)>
+//    = <ax, ay> * <bx *[G] cx, by *[H] cy>
+//    = <ax, ay> * (<bx, by> * <cx, cy>)
+//  Document IP1:
+//    ∀ ax, bx ∈ G, ay, by ∈ H.
+//      <ax, ay> * <bx, by> * ~<bx, by>
+//    = <ax *[G] bx *[G] ~bx, ay *[H] by *[H] ~by>
+//    = <ax, ay>
+//      <ax, ay> * ~<ax, ay> * <bx, by>
+//    = <ax *[G] ~ax *[G] bx, ay *[H] ~ay *[H] by>
+//    = <bx, by>
+//  Document CP1:
+//    ∀ ax, bx ∈ G, ay, by ∈ H.
+//      <ax, ay> * (<bx, by> / <ax, ay>)
+//    = <ax, ay> * <bx /[G] ax, by /[H] ay>
+//    = <ax *[G] (bx /[G] ax), ay *[H] (by /[H] ay)>
+//    = <bx *[G] (ax /[G] bx), by *[H] (ay /[H] by)>
+//    = <bx, by> * <ax /[G] bx, ay /[H] by>
+//    = <bx, by> * (<ax, ay> / <bx, by>)
+//
+// In practical, we use tuples to implement product documents. We can use
+// Partial<{ [K0]: V0, [K1]: V1 ... }> to present the product set
+// <V0 ∪ { ι }, V1 ∪ { ι }, ...>. In the following implementation, an undefined
+// parameters in the partial struct type are mapped to ι.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DocumentTuple<G extends Record<string, any>> = {
+type DocumentTuple<G extends Record<string, unknown>> = {
   [K in keyof G]: DocumentModel<G[K]>;
 };
 
@@ -324,36 +365,15 @@ type OpOfDocumentTuple<Tp> = Partial<{
 }>;
 type DocumentModelFromTuple<Tp> = DocumentModel<OpOfDocumentTuple<Tp>>;
 
-const tupleLift =
-  <Tp extends AnyDocumentTuple>(
-    documentTuple: Tp,
-    method: 'compose' | 'transform'
-  ) =>
-  (
-    a: OpOfDocumentTuple<Tp>,
-    b: OpOfDocumentTuple<Tp>
-  ): OpOfDocumentTuple<Tp> | undefined =>
-    Object.keys(b).reduce(
-      (c, k: keyof Tp) => {
-        if (c) {
-          if (k in c) {
-            const v = documentTuple[k][method](c[k], b[k]);
-            if (v === undefined) {
-              return undefined;
-            } else {
-              c[k] = v;
-            }
-          }
-        }
-        return c;
-      },
-      { ...a } as OpOfDocumentTuple<Tp> | undefined
-    );
+const tupleLift = <Tp extends AnyDocumentTuple>(
+  documentTuple: Tp,
+  method: 'compose' | 'transform'
+): Pbo<OpOfDocumentTuple<Tp>> => liftPbo((k) => documentTuple[k][method]);
 
 export const tupleDocument = <Tp extends AnyDocumentTuple>(
   documentTuple: Tp
 ): DocumentModelFromTuple<Tp> => ({
   inverse: (a) => mapValues(a, (v, k) => documentTuple[k].inverse(v)),
-  compose: tupleLift(documentTuple, "compose"),
-  transform: tupleLift(documentTuple, "transform"),
+  compose: tupleLift(documentTuple, 'compose'),
+  transform: tupleLift(documentTuple, 'transform'),
 });
