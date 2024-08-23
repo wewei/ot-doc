@@ -99,13 +99,14 @@ export const abelianDocument = <G>({ inverse, compose }: GroupModel<G>): Documen
 });
 
 // Typical abelian group documents
-export const numberSumGroup: GroupModel<number> = {
+export const numberSumGroup = (digits: number): GroupModel<number> => ({
   identity: 0,
-  inverse: (x) => -x,
-  compose: (x, y) => x + y,
-};
+  inverse: (x) => Number((-x).toFixed(digits)),
+  compose: (x, y) => Number((x + y).toFixed(digits)),
+});
 
-export const numberSumDocument = abelianDocument(numberSumGroup);
+export const numberSumDocument = (digits: number) =>
+  abelianDocument(numberSumGroup(digits));
 
 // Pair groupoid over a total ordered set infers a Greatest Write Win document,
 // where
@@ -441,3 +442,8 @@ export const updateTuple =
       },
       { ...input } as Partial<T>
     ) as Partial<T>;
+
+export const liftOptional =
+  <G>(pbo: Pbo<G>): Pbo<G | undefined> =>
+  (a, b) =>
+    a === undefined || b === undefined ? undefined : pbo(a, b);
