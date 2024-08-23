@@ -377,3 +377,67 @@ export const tupleDocument = <Tp extends AnyDocumentTuple>(
   compose: tupleLift(documentTuple, 'compose'),
   transform: tupleLift(documentTuple, 'transform'),
 });
+
+// Helper functions to generate document updaters
+export type Updater<T> = (value: T) => T;
+
+export const updateTimestamped =
+  (timestamp: number) =>
+  <T>(update: Updater<T>): Updater<Timestamped<T>> =>
+  ([, value]) =>
+    [timestamp, update(value)];
+
+export const updateGww =
+  <T>(value: T): Updater<Pair<T>> =>
+  ([, to]) =>
+    [to, value];
+
+export const updateLww =
+  (timestamp: number) =>
+  <T>(value: T): Updater<Pair<Timestamped<T>>> =>
+    updateGww([timestamp, value]);
+
+export const updateRecord =
+  <T>(
+    defaultValue: T,
+    isDefault = (v: T) => v === defaultValue
+  ) => (
+    updaters: Record<string, Updater<T>>,
+  ): Updater<Record<string, T>> =>
+  (input) =>
+    Object.entries(updaters).reduce(
+      (output, [k, updater]) => {
+        const v = updater(k in output ? output[k] : defaultValue);
+        if (isDefault(v)) {
+          delete output[k];
+        } else {
+          output[k] = v;
+        }
+        return output;
+      },
+      { ...input }
+    );
+
+export const updateTuple =
+  <T>(
+    defaultTuple: T,
+    isDefault: Partial<{ [K in keyof T]: (v: T[K]) => boolean }> = {}
+  ) =>
+  (
+    updaterTuple: Partial<{ [K in keyof T]: Updater<T[K]> }>
+  ): Updater<Partial<T>> =>
+  (input: Partial<T>) =>
+    Object.entries(updaterTuple).reduce(
+      <K extends keyof T>(output: Partial<T>, entry: unknown) => {
+        const [k, updater] = entry as [K, Updater<T[K]>];
+        const v = updater(k in output ? output[k] as T[K]: defaultTuple[k]);
+        const isDft = isDefault[k] ?? ((u: T[K]) => u === defaultTuple[k]);
+        if (isDft(v)) {
+          delete output[k];
+        } else {
+          output[k] = v;
+        }
+        return output;
+      },
+      { ...input } as Partial<T>
+    ) as Partial<T>;
