@@ -1,7 +1,10 @@
 import { identity, mapValues } from "lodash";
 
 // Partial Binary Operator
-type Pbo<G> = (a: G, b: G) => G | undefined;
+export type PartialBinaryOperator<G> = (a: G, b: G) => G | undefined;
+export type BinaryOperator<G> = (a: G, b: G) => G;
+export type UnaryOperator<G> = (a: G) => G;
+export type Comparator<G> = (a: G, b: G) => boolean;
 
 // A complete document model is an algebric groupoid plus a transform operator.
 // A groupoid is consists of
@@ -34,13 +37,13 @@ type Pbo<G> = (a: G, b: G) => G | undefined;
 // result of a * b where <a, b> ∉ dom(*), or a / b where <a, b> ∉ dom(/)
 export type Groupoid<G> = {
   // Given 1 operation a, return the inverse operation
-  inverse: (a: G) => G;
+  inverse: UnaryOperator<G>;
 
   // Given 2 consequent operations: a, b, return the composition of the 2
   // operators c. Note, the compose operator is a partial operation, it's not
   // neccessary for all <a, b> ∈ <G, G> to have a composition.
   // Notation: a * b = c
-  compose: Pbo<G>;
+  compose: PartialBinaryOperator<G>;
 };
 
 export type DocumentModel<G> = Groupoid<G> & {
@@ -48,15 +51,14 @@ export type DocumentModel<G> = Groupoid<G> & {
   // transformation result of a, say a', where a' applies on the state after b,
   // with the same effect as a, considering the impact of b.
   // Notation: a / b = a'
-  transform: Pbo<G>
+  transform: PartialBinaryOperator<G>;
 };
-
 
 // An algebric group consists of
 //    * A set G
 //    * An identity element 1
 //    * A unary operator, inverse (~)
-//    * A binary operator compose (*) 
+//    * A binary operator compose (*)
 // Notation: GroupModel<G> => <G, 1, ~, *>
 //                         where
 //                            1 ∈           G
@@ -71,8 +73,8 @@ export type DocumentModel<G> = Groupoid<G> & {
 // COP: ∀ a, b ∈ G → a * b = b * a
 export type GroupModel<G> = {
   identity: G;
-  inverse: (a: G) => G;
-  compose: (a: G, b: G) => G;
+  inverse: UnaryOperator<G>;
+  compose: BinaryOperator<G>;
 };
 
 // All abelian groups are already groupoid, we use <x, _> -> x as transform to
@@ -92,10 +94,13 @@ export type GroupModel<G> = {
 //  Document CP2:
 //    ∀ a, b, c ∈ G.
 //      (a / b) / (c / b) = a = (a / c) / (b / c)
-export const abelianDocument = <G>({ inverse, compose }: GroupModel<G>): DocumentModel<G> => ({
+export const abelianDocument = <G>({
   inverse,
   compose,
-  transform: identity
+}: GroupModel<G>): DocumentModel<G> => ({
+  inverse,
+  compose,
+  transform: identity,
 });
 
 // Typical abelian group documents
@@ -143,15 +148,15 @@ export const eqFromOrdered = <S>({
   equals: (a, b) => !lessThan(a, b) && !lessThan(b, a),
 });
 
+export type Gww<S> = [S, S];
 
-export type Pair<S> = [S, S];
-
-export const pairGroupoid = <S>({ equals }: EqModel<S>): Groupoid<Pair<S>> => ({
+export const pairGroupoid = <S>({ equals }: EqModel<S>): Groupoid<Gww<S>> => ({
   inverse: ([from, to]) => [to, from],
-  compose: ([fromA, toA], [fromB, toB]) => equals(toA, fromB) ? [fromA, toB] : undefined,
+  compose: ([fromA, toA], [fromB, toB]) =>
+    equals(toA, fromB) ? [fromA, toB] : undefined,
 });
 
-export type GwwDocument<S> = DocumentModel<Pair<S>>;
+export type GwwDocument<S> = DocumentModel<Gww<S>>;
 
 export const gwwDocument = <S>(
   { lessThan }: OrderedModel<S>,
@@ -161,7 +166,8 @@ export const gwwDocument = <S>(
   return {
     inverse,
     compose,
-    transform: ([, toA], [, toB]) => [toB, lessThan(toB, toA) ? toA : toB],
+    transform: ([fromA, toA], [fromB, toB]) =>
+      equals(fromA, fromB) ? [toB, lessThan(toB, toA) ? toA : toB] : undefined,
   };
 };
 
@@ -169,8 +175,8 @@ export const gwwDocument = <S>(
 // The key point is to pair a timestamp to the value, and always compare the
 // timestamp first
 export type Timestamped<S> = [number, S];
-
-export type LwwDocument<S> = GwwDocument<Timestamped<S>>;
+export type Lww<S> = Gww<Timestamped<S>>;
+export type LwwDocument<S> = DocumentModel<Lww<S>>;
 
 export const lwwDocument = <S>(
   { lessThan }: OrderedModel<S>,
@@ -182,7 +188,7 @@ export const lwwDocument = <S>(
   );
 
 export const primitiveEq = {
-  equals: <P>(a: P, b: P) => a === b
+  equals: <P>(a: P, b: P) => a === b,
 };
 
 export const primitiveOrder = {
@@ -251,8 +257,8 @@ export const optionalDocument = <G>({
 
 const liftPbo =
   <G extends Record<string, unknown>>(
-    getFunc: (key: keyof G) => Pbo<G[typeof key]>
-  ): Pbo<G> =>
+    getFunc: (key: keyof G) => PartialBinaryOperator<G[typeof key]>
+  ): PartialBinaryOperator<G> =>
   (a, b) =>
     Object.keys(b).reduce(
       (c, k: keyof G) => {
@@ -306,7 +312,9 @@ const liftPbo =
 // In this implementation, for all key not defined in the record, we assume
 // they're mapped to ι.
 
-const recordLift = <G>(f: Pbo<G>): Pbo<Record<string, G>> => liftPbo(() => f);
+const recordLift = <G>(
+  f: PartialBinaryOperator<G>
+): PartialBinaryOperator<Record<string, G>> => liftPbo(() => f);
 
 export const recordDocument = <G>({
   inverse,
@@ -369,7 +377,8 @@ type DocumentModelFromTuple<Tp> = DocumentModel<OpOfDocumentTuple<Tp>>;
 const tupleLift = <Tp extends AnyDocumentTuple>(
   documentTuple: Tp,
   method: 'compose' | 'transform'
-): Pbo<OpOfDocumentTuple<Tp>> => liftPbo((k) => documentTuple[k][method]);
+): PartialBinaryOperator<OpOfDocumentTuple<Tp>> =>
+  liftPbo((k) => documentTuple[k][method]);
 
 export const tupleDocument = <Tp extends AnyDocumentTuple>(
   documentTuple: Tp
@@ -389,22 +398,18 @@ export const updateTimestamped =
     [timestamp, update(value)];
 
 export const updateGww =
-  <T>(value: T): Updater<Pair<T>> =>
+  <T>(value: T): Updater<Gww<T>> =>
   ([, to]) =>
     [to, value];
 
 export const updateLww =
   (timestamp: number) =>
-  <T>(value: T): Updater<Pair<Timestamped<T>>> =>
+  <T>(value: T): Updater<Gww<Timestamped<T>>> =>
     updateGww([timestamp, value]);
 
 export const updateRecord =
-  <T>(
-    defaultValue: T,
-    isDefault = (v: T) => v === defaultValue
-  ) => (
-    updaters: Record<string, Updater<T>>,
-  ): Updater<Record<string, T>> =>
+  <T>(defaultValue: T, isDefault = (v: T) => v === defaultValue) =>
+  (updaters: Record<string, Updater<T>>): Updater<Record<string, T>> =>
   (input) =>
     Object.entries(updaters).reduce(
       (output, [k, updater]) => {
@@ -431,7 +436,7 @@ export const updateTuple =
     Object.entries(updaterTuple).reduce(
       <K extends keyof T>(output: Partial<T>, entry: unknown) => {
         const [k, updater] = entry as [K, Updater<T[K]>];
-        const v = updater(k in output ? output[k] as T[K]: defaultTuple[k]);
+        const v = updater(k in output ? (output[k] as T[K]) : defaultTuple[k]);
         const isDft = isDefault[k] ?? ((u: T[K]) => u === defaultTuple[k]);
         if (isDft(v)) {
           delete output[k];
@@ -444,6 +449,6 @@ export const updateTuple =
     ) as Partial<T>;
 
 export const liftOptional =
-  <G>(pbo: Pbo<G>): Pbo<G | undefined> =>
+  <G>(pbo: PartialBinaryOperator<G>): PartialBinaryOperator<G | undefined> =>
   (a, b) =>
     a === undefined || b === undefined ? undefined : pbo(a, b);
