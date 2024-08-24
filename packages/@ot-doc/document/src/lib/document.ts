@@ -99,14 +99,14 @@ export const abelianDocument = <G>({ inverse, compose }: GroupModel<G>): Documen
 });
 
 // Typical abelian group documents
-export const numberSumGroup = (digits: number): GroupModel<number> => ({
+export const sumOfNumberGroup = (digits: number): GroupModel<number> => ({
   identity: 0,
   inverse: (x) => Number((-x).toFixed(digits)),
   compose: (x, y) => Number((x + y).toFixed(digits)),
 });
 
-export const numberSumDocument = (digits: number) =>
-  abelianDocument(numberSumGroup(digits));
+export const sumOfNumber = (digits: number) =>
+  abelianDocument(sumOfNumberGroup(digits));
 
 // Pair groupoid over a total ordered set infers a Greatest Write Win document,
 // where
@@ -133,10 +133,6 @@ export type EqModel<S> = {
   equals: (a: S, b: S) => boolean;
 };
 
-export const primitiveEq = {
-  equals: <P>(a: P, b: P) => a === b
-};
-
 export type OrderedModel<S> = {
   lessThan: (a: S, b: S) => boolean;
 };
@@ -146,10 +142,6 @@ export const eqFromOrdered = <S>({
 }: OrderedModel<S>): EqModel<S> => ({
   equals: (a, b) => !lessThan(a, b) && !lessThan(b, a),
 });
-
-export const primitiveOrder = {
-  lessThan: <P>(a: P, b: P) => a < b,
-};
 
 
 export type Pair<S> = [S, S];
@@ -188,6 +180,14 @@ export const lwwDocument = <S>(
     { lessThan: ([tA, vA], [tB, vB]) => tA < tB || (tA === tB && vA < vB) },
     { equals: ([tA, vA], [tB, vB]) => tA === tB && equals(vA, vB) }
   );
+
+export const primitiveEq = {
+  equals: <P>(a: P, b: P) => a === b
+};
+
+export const primitiveOrder = {
+  lessThan: <P>(a: P, b: P) => a < b,
+};
 
 // Typical GWW documents
 const gwwPrimitive = gwwDocument(primitiveOrder, primitiveEq);
