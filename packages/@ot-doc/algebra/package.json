@@ -2,10 +2,14 @@
   "name": "@ot-doc/algebra",
   "version": "0.0.1",
   "dependencies": {
+    "lodash": "^4.17.21",
     "tslib": "^2.3.0"
   },
   "type": "commonjs",
   "main": "./src/index.js",
   "typings": "./src/index.d.ts",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/lodash": "^4.17.7"
+  }
 }
