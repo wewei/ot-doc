@@ -14,6 +14,8 @@ import {
   Lww,
   lwwNumber,
   lwwBoolean,
+  recordDocument,
+  optionalDocument,
 } from './document';
 
 type DocumentOperators<G> = {
@@ -36,6 +38,7 @@ const operators = <G>(
 const verifyAP =
   <G>({ $c, $e }: DocumentOperators<G>) =>
   ({ops: [a, b, c], rlt }: TestCaseAP<G>) => {
+    // console.log(a, b, c, $c($c(a, b), c), rlt);
     expect($e($c($c(a, b), c), rlt)).toBeTruthy();
     expect($e($c(a, $c(b, c)), rlt)).toBeTruthy();
   };
@@ -43,6 +46,7 @@ const verifyAP =
 const verifyIP1 =
   <G>({ $c, $e, $i }: DocumentOperators<G>) =>
   ({ ops: [a, b] }: TestCaseIP1<G>) => {
+    console.log(a, b, $c($c(a, b), $i(b)), $c($c($i(a), a), b));
     expect($e($c($c(a, b), $i(b)), a)).toBeTruthy();
     expect($e($c($c($i(a), a), b), b)).toBeTruthy();
   };
@@ -326,3 +330,50 @@ describeDocumentModel('lwwBoolean', lwwBoolean, {
     lwwTestCaseCP1(true, true, false, [[0, true], [1, true]], true),
   ],
 });
+
+const olwwTestCaseAP = <G>(x: G, y: G | null, z: G | null, w: G | null): TestCaseAP<Lww<G> | null> => ({
+  ops: [
+    y ? [[0, x], [1, y]] : null,
+    z ? [ y ? [1, y] : [0, x], [2, z]] : null,
+    w ? [ z ? [2, z] : y ? [1, y] : [0, x], [3, w] ] : null,
+  ],
+  rlt: w ? [[0, x], [3, w]] : z ? [[0, x], [2, z]] : y ? [[0, x], [1, y]] : null,
+});
+
+const olwwTestCaseIP1 = <G>(x: G, y: G | null, z: G | null): TestCaseIP1<Lww<G> | null> => ({
+  ops: [
+    y ? [[0, x], [1, y]] : null,
+    z ? [y ? [1, y]: [0, x], [2, z]] : null,
+  ],
+});
+
+const olwwTestCaseCP1 = <G>(
+  x: G,
+  y: G | null,
+  z: G | null,
+  rlt: Lww<G> | null,
+  isSim = false,
+): TestCaseCP1<Lww<G> | null> => ({
+  ops: [
+    y ? [[0, x], [1, y]] : null,
+    z ? [y ? [1, y]: [0, x], [2, z]] : null,
+  ],
+  rlt,
+});
+
+describeDocumentModel('optionalDocument', optionalDocument(lwwNumber), {
+  ap: [
+    olwwTestCaseAP(0, null, null, null),
+    olwwTestCaseAP(0, null, null, 1),
+    olwwTestCaseAP(0, null, 1, 2),
+    olwwTestCaseAP(0, 1, 2, 3),
+  ],
+  ip1: [
+    olwwTestCaseIP1(0, null, null),
+    olwwTestCaseIP1(0, null, 1),
+    olwwTestCaseIP1(0, 1, 2),
+  ],
+  cp1: [],
+});
+
+// describeDocumentModel('recordDocument', recordDocument, {});

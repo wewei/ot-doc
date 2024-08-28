@@ -1,0 +1,19 @@
+{
+  "name": "@ot-doc/algebra",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/@ot-doc/algebra/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/@ot-doc/algebra",
+        "main": "packages/@ot-doc/algebra/src/index.ts",
+        "tsConfig": "packages/@ot-doc/algebra/tsconfig.lib.json",
+        "assets": ["packages/@ot-doc/algebra/*.md"]
+      }
+    }
+  }
+}

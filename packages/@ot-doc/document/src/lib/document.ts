@@ -208,7 +208,8 @@ export const lwwString = lwwPrimitive as LwwDocument<string>;
 export const lwwBoolean = lwwPrimitive as LwwDocument<boolean>;
 
 // Given a document <G, ~, *, /> and an element ι ∉ G, we can define an optional
-// document over the G ∪ { ι }
+// document over the f(G, ι), where 
+//
 //    ~ι    = ι
 //    ~x    = ~[G]x (x ∈ G)
 //    x * ι = ι * x = x
