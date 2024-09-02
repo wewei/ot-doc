@@ -14,7 +14,6 @@ import {
   Lww,
   lwwNumber,
   lwwBoolean,
-  recordDocument,
   optionalDocument,
 } from './document';
 
