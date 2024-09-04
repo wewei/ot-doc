@@ -1,4 +1,4 @@
-import { PartialBinaryOperator, UnaryOperator } from './algebra';
+import { structLiftEqu, structLiftPartialBinaryOperator, structLiftUnaryOperator } from './algebra';
 import { Document } from './document-core';
 
 /**
@@ -86,74 +86,19 @@ export const recordDocument = <U>({
   comp,
   tran,
 }: Document<U>): Document<Record<string, U>> => {
-  const rep: UnaryOperator<Record<string, U>> = (rec) =>
-    Object.entries(rec).reduce((m, [key, u]) => {
-      if (equ(idn)(u)) {
-        if (m === rec) {
-          // Copy on write
-          m = { ...rec };
-        }
-        delete m[key];
-      }
-      return m;
-    }, rec);
-  // Lift a UnaryOperator<U> to UnaryOperator<Record<string, U>>
-  // This is indeed mapping values in objects
-  const liftUo =
-    (uo: UnaryOperator<U>): UnaryOperator<Record<string, U>> =>
-    (rec) =>
-      Object.entries(rec).reduce((m, [key, u]) => {
-        m[key] = uo(u);
-        return m;
-      }, {} as Record<string, U>);
+  const getIdn = () => idn;
+  const getEqu = () => equ;
+  const getInv = () => inv;
+  const getComp = () => comp;
+  const getTran = () => tran;
+  const liftUo = structLiftUnaryOperator(getIdn)(getEqu);
+  const liftPbo = structLiftPartialBinaryOperator(getIdn)(getEqu);
 
-  // Lift a PartialBinaryOperator<U> to PartialBinaryOperator<Record<string, U>>
-  // It assumes the pbo (denoted by (.)) has the right identity property
-  //    ∀ a ∈ U, a . ι = a
-  // Both (*) and (/) has this property (@4.1, @4.2)
-  const liftPbo =
-    (pbo: PartialBinaryOperator<U>): PartialBinaryOperator<Record<string, U>> =>
-    (recA) =>
-    (recB) =>
-      Object.entries(recB).reduce(
-        (m, [key, u]) => {
-          if (m) {
-            const value = pbo(m[key] ?? idn)(u);
-            if (value === undefined) {
-              return undefined;
-            }
-            if (equ(idn)(value)) {
-              delete m[key];
-            } else {
-              m[key] = value;
-            }
-          }
-          return m;
-        },
-        { ...recA } as Record<string, U> | undefined
-      );
   return {
     idn: {},
-    inv: liftUo(inv),
-    comp: liftPbo(comp),
-    tran: liftPbo(tran),
-    equ: (a) => (b) => {
-      if (a === b) {
-        return true;
-      }
-      const repA = rep(a);
-      const repB = rep(b);
-      if (Object.keys(repA).length !== Object.keys(repB).length) {
-        return false;
-      }
-      for (const key in repA) {
-        const uA = repA[key] ?? null;
-        const uB = repB[key] ?? null;
-        if (uA === null || uB === null || !equ(uA)(uB)) {
-          return false;
-        }
-      }
-      return true;
-    },
+    inv: liftUo(getInv),
+    comp: liftPbo(getComp),
+    tran: liftPbo(getTran),
+    equ: structLiftEqu(getIdn)(getEqu),
   };
 };

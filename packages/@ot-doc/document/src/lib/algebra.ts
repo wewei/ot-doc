@@ -55,3 +55,93 @@ export const ordered = <S>(
   equ,
 });
 
+
+export const structLiftUnaryOperator =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  <T extends Record<string, any>>(
+    getIdn: <K extends keyof T>(key: K) => T[K],
+  ) => (
+    getEqu: <K extends keyof T>(key: K) => Relation<T[K]>
+  ) => <U extends Partial<T>>(
+    getUo: <K extends keyof T>(key: K) => UnaryOperator<T[K]>
+  ) => (stt: U): U =>
+    Object.entries(stt).reduce<U>(
+      <K extends keyof T>(sttM: U, [key, u]: [K, T[K]]) => {
+        if (sttM === stt) {
+          sttM = { ...stt };
+        }
+        const newValue = getUo(key)(u);
+        if (newValue === undefined || getEqu(key)(getIdn(key))(newValue)) {
+          delete sttM[key];
+        } else {
+          sttM[key] = newValue;
+        }
+        return sttM;
+      },
+      stt
+    );
+
+export const structLiftPartialBinaryOperator =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  <T extends Record<string, any>>(
+    getIdn: <K extends keyof T>(key: K) => T[K],
+  ) => (
+    getEqu: <K extends keyof T>(key: K) => Relation<T[K]>
+  ) => <U extends Partial<T>>(
+    getPbo: <K extends keyof T>(key: K) => PartialBinaryOperator<T[K]>,
+  ): PartialBinaryOperator<U> =>
+  (sttA) =>
+  (sttB) =>
+    Object.entries(sttB).reduce(
+      <K extends keyof T>(
+        stt: U | undefined,
+        [key, value]: [K, T[K]]
+      ) => {
+        if (stt === sttA) {
+          stt = { ...sttA };
+        }
+        if (stt) {
+          const idn = getIdn(key);
+          const newValue = getPbo(key)(stt[key] ?? idn)(value);
+          if (newValue === undefined) {
+            return undefined;
+          }
+          if (getEqu(key)(idn)(value)) {
+            delete stt[key];
+          } else {
+            stt[key] = newValue;
+          }
+        }
+        return stt;
+      },
+      sttA as U | undefined
+    );
+
+export const structLiftEqu =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  <T extends Record<string, any>>(
+    getIdn: <K extends keyof T>(key: K) => T[K],
+  ) => (
+    getEqu: <K extends keyof T>(key: K) => Relation<T[K]>
+  ): Relation<Partial<T>> => (sttA) => (sttB) => {
+    if (sttA === sttB) {
+      return true;
+    }
+
+    for (const key in sttA) {
+      const valueA = sttA[key] as T[typeof key];
+      const valueB = sttB[key] as T[typeof key] | undefined;
+      const equA = getEqu(key)(valueA);
+      if (!equA(valueB === undefined ? getIdn(key) : valueB)) {
+        return false
+      }
+    }
+    for (const key in sttB) {
+      const valueB = sttB[key] as T[typeof key];
+      const equB = getEqu(key)(valueB);
+      if (!(key in sttA) && !equB(getIdn(key))) {
+        return false;
+      }
+    }
+    return true;
+  }

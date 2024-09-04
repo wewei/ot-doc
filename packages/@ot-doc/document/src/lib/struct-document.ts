@@ -1,3 +1,4 @@
+import { structLiftEqu, structLiftPartialBinaryOperator, structLiftUnaryOperator } from "./algebra";
 import { Document } from "./document-core";
 
 /**
@@ -74,6 +75,21 @@ type DocumentStruct<T extends Record<string, unknown>> = {
   [K in keyof T]: Document<T[K]>;
 };
 
-export const structDocument = <T extends Record<string, unknown>>(struct: DocumentStruct<T>): Document<T> => {
+export const structDocument = <T extends Record<string, unknown>>(struct: DocumentStruct<T>): Document<Partial<T>> => {
+  const getIdn = <K extends keyof T>(key: K) => struct[key].idn;
+  const getEqu = <K extends keyof T>(key: K) => struct[key].equ;
+  const getInv = <K extends keyof T>(key: K) => struct[key].inv;
+  const getComp = <K extends keyof T>(key: K) => struct[key].comp;
+  const getTran = <K extends keyof T>(key: K) => struct[key].tran;
+  const liftUo = structLiftUnaryOperator(getIdn)(getEqu);
+  const liftPbo = structLiftPartialBinaryOperator(getIdn)(getEqu);
+
+  return {
+    idn: {},
+    inv: liftUo(getInv),
+    comp: liftPbo(getComp),
+    tran: liftPbo(getTran),
+    equ: structLiftEqu(getIdn)(getEqu),
+  };
 
 };
