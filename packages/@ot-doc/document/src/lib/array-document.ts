@@ -64,13 +64,18 @@ export type Oplet<T> = {
   val: T,
 };
 
+type List<T> = {
+  val: T,
+  nxt: List<T>;
+} | null;
+
 export const arrayDocument = <T>({ lt, equ }: Ordered<T>): DocumentMeta<Oplet<T>[]>  => {
   const rep = (a: Oplet<T>[]): Oplet<T>[] | undefined => a; // TODO
-  const liftTran = (tranElem: (eA: Oplet<T>) => (eB: Oplet<T>) => Oplet<T>[] | undefined): PartialBinaryOperator<Oplet<T>[]> => {
-    const tran: PartialBinaryOperator<Oplet<T>[]> = (a) => (b) => {
-      if (a.length === 0) return [];
-      if (b.length === 0) return a;
-      
+  const liftTran = (tranElem: (eA: Oplet<T>) => (eB: Oplet<T>) => List<Oplet<T>> | undefined): PartialBinaryOperator<List<Oplet<T>>> => {
+    const tran: PartialBinaryOperator<List<Oplet<T>>> = (a) => (b) => {
+      if (a === null) return null;
+      if (b === null) return a;
+
     };
     return tran;
   };
