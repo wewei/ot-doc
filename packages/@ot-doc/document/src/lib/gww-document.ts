@@ -1,5 +1,5 @@
 import { Ordered, UnaryOperator } from "./algebra";
-import { Document } from "./document-core";
+import { DocumentMeta } from "./document-meta";
 
 /**
  * Greater Write Wins document
@@ -93,7 +93,7 @@ import { Document } from "./document-core";
 export type Pair<S> = [S, S];
 export type Gww<S> = Pair<S> | null;
 
-export const gwwDocument = <S>({ lt, equ }: Ordered<S>): Document<Gww<S>> => {
+export const gwwDocument = <S>({ lt, equ }: Ordered<S>): DocumentMeta<Gww<S>> => {
   const rep: UnaryOperator<Gww<S>> = (a) =>
     a === null || a[0] === a[1] ? null : a;
   return {

@@ -145,3 +145,9 @@ export const structLiftEqu =
     }
     return true;
   }
+
+export const liftPartialBinaryOperator =
+  <G>(pbo: PartialBinaryOperator<G>): BinaryOperator<G | undefined> =>
+  (a) =>
+  (b) =>
+    a === undefined || b === undefined ? undefined : pbo(a)(b);

@@ -1,5 +1,5 @@
 import { structLiftEqu, structLiftPartialBinaryOperator, structLiftUnaryOperator } from './algebra';
-import { Document } from './document-core';
+import { DocumentMeta } from './document-meta';
 
 /**
  * Power document
@@ -85,7 +85,7 @@ export const recordDocument = <U>({
   equ,
   comp,
   tran,
-}: Document<U>): Document<Record<string, U>> => {
+}: DocumentMeta<U>): DocumentMeta<Record<string, U>> => {
   const getIdn = () => idn;
   const getEqu = () => equ;
   const getInv = () => inv;

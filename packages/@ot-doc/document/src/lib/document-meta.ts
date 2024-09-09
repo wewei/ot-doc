@@ -57,7 +57,7 @@ import { Eq, PartialBinaryOperator, UnaryOperator } from "./algebra";
  *          ∧ (a / b) / (c / b) = (a / c) / (b / c)
  */
 
-export type Document<T> = Eq<T> & {
+export type DocumentMeta<T> = Eq<T> & {
   idn: T;
   inv: UnaryOperator<T>;
   comp: PartialBinaryOperator<T>;
