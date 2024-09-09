@@ -8,4 +8,7 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../../coverage/packages/@ot-doc/document',
+  coveragePathIgnorePatterns: [
+    '<rootDir>/src/util/',
+  ]
 };

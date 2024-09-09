@@ -1,5 +1,5 @@
 import { gwwDocument, Gww } from './gww-document';
-import { DocumentTestCases, describeDocumentMeta } from './test-utility';
+import { DocumentTestCases, describeDocumentMeta } from '../util/test-utility';
 
 const gwwNumber = (digits: number) =>
   gwwDocument<number>({

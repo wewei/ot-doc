@@ -1,8 +1,14 @@
-import { liftPartialBinaryOperator } from "./algebra";
-import { DocumentMeta } from "./document-meta";
+import { BinaryOperator, PartialBinaryOperator } from "../lib/algebra";
+import { DocumentMeta } from "../lib/document-meta";
+
+const liftPartialBinaryOperator =
+  <G>(pbo: PartialBinaryOperator<G>): BinaryOperator<G | undefined> =>
+  (a) =>
+  (b) =>
+    a === undefined || b === undefined ? undefined : pbo(a)(b);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const opToString = (op: any) => JSON.stringify(op, (key, value) => {
+const opToString = (op: any) => JSON.stringify(op, (key, value) => {
   if (value === Infinity) {
     return { v: 'Infinity' };
   }
@@ -18,6 +24,7 @@ export type DocumentTestCases<G> = Partial<{
   incomposable: [G, G][];
   transformable: [G, G][];
   untransformable: [G, G][];
+  others: (meta: DocumentMeta<G>) => void;
 }>;
 
 const verifyIdnP1 =
@@ -106,6 +113,7 @@ export const describeDocumentMeta = <G>(
     incomposable,
     transformable,
     untransformable,
+    others,
   }: DocumentTestCases<G>
 ) =>
   describe(`[Document] ${name}`, () => {
@@ -116,4 +124,5 @@ export const describeDocumentMeta = <G>(
     incomposable?.forEach(verifyIncomp(meta));
     transformable?.forEach(verifyCnvP1(meta));
     untransformable?.forEach(verifyUntran(meta));
+    others?.(meta);
   });

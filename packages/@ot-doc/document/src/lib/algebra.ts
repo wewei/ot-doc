@@ -41,20 +41,9 @@ export type Eq<T> = {
   equ: Relation<T>;
 };
 
-export const eq = <T>(equ: Relation<T>): Eq<T> => ({ equ });
-
 export type Ordered<S> = Eq<S> & {
   lt: Relation<S>;
 };
-
-export const ordered = <S>(
-  lt: Relation<S>,
-  equ: Relation<S> = (a) => (b) => !lt(a)(b) && !lt(b)(a)
-): Ordered<S> => ({
-  lt,
-  equ,
-});
-
 
 export const structLiftUnaryOperator =
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -145,9 +134,3 @@ export const structLiftEqu =
     }
     return true;
   }
-
-export const liftPartialBinaryOperator =
-  <G>(pbo: PartialBinaryOperator<G>): BinaryOperator<G | undefined> =>
-  (a) =>
-  (b) =>
-    a === undefined || b === undefined ? undefined : pbo(a)(b);
