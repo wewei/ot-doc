@@ -9,5 +9,5 @@
   "include": [
     "jest.config.ts",
     "src/**/*.ts"
-  ]
+, "../../document.spec.ts"  ]
 }

@@ -1,5 +1,5 @@
 import { structLiftEqu, structLiftPartialBinaryOperator, structLiftUnaryOperator } from "./algebra";
-import { Document } from "./document-core";
+import { DocumentMeta } from "./document-meta";
 
 /**
  * Product document
@@ -72,10 +72,10 @@ import { Document } from "./document-core";
  */
 
 type DocumentStruct<T extends Record<string, unknown>> = {
-  [K in keyof T]: Document<T[K]>;
+  [K in keyof T]: DocumentMeta<T[K]>;
 };
 
-export const structDocument = <T extends Record<string, unknown>>(struct: DocumentStruct<T>): Document<Partial<T>> => {
+export const structDocument = <T extends Record<string, unknown>>(struct: DocumentStruct<T>): DocumentMeta<Partial<T>> => {
   const getIdn = <K extends keyof T>(key: K) => struct[key].idn;
   const getEqu = <K extends keyof T>(key: K) => struct[key].equ;
   const getInv = <K extends keyof T>(key: K) => struct[key].inv;

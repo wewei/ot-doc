@@ -25,7 +25,8 @@ import { Eq, PartialBinaryOperator, UnaryOperator } from "./algebra";
  *          ∧ !a * a = ι
  *    @4.4 [AsscP] Associative Property
  *        ∀ a, b, c ∈ T, <a, b>, <b, c> ∈ Dom(*)
- *          → <a * b, c>, <a, b * c> ∈ Dom(*)
+ *          → <a * b, c>, <a, b * c> ∉ Dom(*)
+ *          ∨ <a * b, c>, <a, b * c> ∈ Dom(*)
  *          ∧ (a * b) * c = a * (b * c)
  *    @4.5 [CnvP1] Convergence Property 1
  *        ∀ a, b ∈ T, <a, b> ∈ Dom(/)
@@ -57,7 +58,7 @@ import { Eq, PartialBinaryOperator, UnaryOperator } from "./algebra";
  *          ∧ (a / b) / (c / b) = (a / c) / (b / c)
  */
 
-export type Document<T> = Eq<T> & {
+export type DocumentMeta<T> = Eq<T> & {
   idn: T;
   inv: UnaryOperator<T>;
   comp: PartialBinaryOperator<T>;

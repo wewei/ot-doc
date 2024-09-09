@@ -1,5 +1,5 @@
 import { Ordered, UnaryOperator } from "./algebra";
-import { Document } from "./document-core";
+import { DocumentMeta } from "./document-meta";
 
 /**
  * Greater Write Wins document
@@ -33,8 +33,12 @@ import { Document } from "./document-core";
  *    AsscP -
  *      ∀ a, b ∈ T
  *      (ι * a) * b ={@5.3.2} a * b ={@5.3.2} ι * (a * b)
- *      (a * ι) * b ={@5.3.1} a * b ={@5.3.2} a * (ι * b)
  *      (a * b) * ι ={@5.3.1} a * b ={@5.3.1} a * (b * ι)
+ *      case <a, b> ∈ Dom(*)
+ *        (a * ι) * b ={@5.3.1} a * b ={@5.3.2} a * (ι * b)
+ *      case <a, b> ∉ Dom(*)
+ *        <a * ι, b> ={@5.3.1} <a, b> ∉ Dom(*)
+ *        <a, ι * b> ={@5.3.2} <a, b> ∉ Dom(*)
  *      ∀ a, b, c ∈ { (x, y) | x, y ∈ S, x ≠ y }
  *      Because of <a, b>, <b, c> ∈ Dom(*), we can define
  *      a = (x, y), b = (y, z), c = (z, w) where
@@ -93,46 +97,53 @@ import { Document } from "./document-core";
 export type Pair<S> = [S, S];
 export type Gww<S> = Pair<S> | null;
 
-export const gwwDocument = <S>({ lt, equ }: Ordered<S>): Document<Gww<S>> => {
+export const gwwDocument = <S>({
+  lt = (a) => (b) => a < b,
+  equ = (a) => (b) => a === b,
+}: Partial<Ordered<S>> = {}): DocumentMeta<Gww<S>> => {
   const rep: UnaryOperator<Gww<S>> = (a) =>
-    a === null || a[0] === a[1] ? null : a;
+    a === null || equ(a[0])(a[1]) ? null : a;
   return {
     idn: null,
-    inv: (a) => (a ? (([x, y]) => [y, x])(a) : null),
+    inv: (a) => (a ? (([x, y]) => rep([y, x]))(a) : null),
     comp: (a) => (b) => {
-      if (a && b) {
-        const [x, y] = a;
-        const [z, w] = b;
+      const rA = rep(a);
+      const rB = rep(b);
+      if (rA && rB) {
+        const [x, y] = rA;
+        const [z, w] = rB;
         if (equ(y)(z)) {
-          return equ(x)(w) ? null : [x, w];
+          return rep([x, w]);
         }
         return undefined;
       }
-      return a ? a : b;
+      return rA ? rA : rB;
     },
     tran: (a) => (b) => {
-      if (a && b) {
-        const [x, y] = a;
-        const [z, w] = b;
+      const rA = rep(a);
+      const rB = rep(b);
+      if (rA && rB) {
+        const [x, y] = rA;
+        const [z, w] = rB;
         if (equ(x)(z)) {
           return lt(w)(y) ? [w, y] : null;
         }
         return undefined;
       }
-      return a;
+      return rA;
     },
     equ: (a) => (b) => {
       if (a === b) {
         return true;
       }
-      const repA = rep(a);
-      const repB = rep(b);
-      if (repA && repB) {
-        const [x, y] = repA;
-        const [z, w] = repB;
+      const rA = rep(a);
+      const rB = rep(b);
+      if (rA && rB) {
+        const [x, y] = rA;
+        const [z, w] = rB;
         return equ(x)(z) && equ(y)(w);
       }
-      return repA === repB;
+      return rA === rB;
     },
   };
 };

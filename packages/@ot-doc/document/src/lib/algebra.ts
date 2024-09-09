@@ -106,7 +106,7 @@ export const structLiftPartialBinaryOperator =
           if (newValue === undefined) {
             return undefined;
           }
-          if (getEqu(key)(idn)(value)) {
+          if (getEqu(key)(idn)(newValue)) {
             delete stt[key];
           } else {
             stt[key] = newValue;
@@ -145,3 +145,9 @@ export const structLiftEqu =
     }
     return true;
   }
+
+export const liftPartialBinaryOperator =
+  <G>(pbo: PartialBinaryOperator<G>): BinaryOperator<G | undefined> =>
+  (a) =>
+  (b) =>
+    a === undefined || b === undefined ? undefined : pbo(a)(b);
