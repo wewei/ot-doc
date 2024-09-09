@@ -106,7 +106,7 @@ export const structLiftPartialBinaryOperator =
           if (newValue === undefined) {
             return undefined;
           }
-          if (getEqu(key)(idn)(value)) {
+          if (getEqu(key)(idn)(newValue)) {
             delete stt[key];
           } else {
             stt[key] = newValue;
