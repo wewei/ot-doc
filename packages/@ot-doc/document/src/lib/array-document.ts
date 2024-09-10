@@ -55,7 +55,7 @@
  *          | otherwise = Nothing
  */
 
-import { Ordered, PartialBinaryOperator } from "./algebra";
+import { Ordered } from "./algebra";
 import { DocumentMeta } from "./document-meta";
 
 export type Oplet<T> = {
@@ -64,47 +64,52 @@ export type Oplet<T> = {
   val: T,
 };
 
-type List<T> = {
-  val: T,
-  nxt: List<T>;
-} | null;
-
-export const arrayDocument = <T>({ lt, equ }: Ordered<T>): DocumentMeta<Oplet<T>[]>  => {
+export const arrayDocument = <T>({
+  // lt = (a) => (b) => a < b,
+  equ = (a) => (b) => a === b,
+}: Partial<Ordered<T>> = {}): DocumentMeta<Oplet<T>[]>  => {
   const rep = (a: Oplet<T>[]): Oplet<T>[] | undefined => {
     const r = [...a];
-    for (let i = r.length; i > 0; i -= 1) {
-      for (let j = 0; j < i - 1; j += 1) {
-        const eA = r[j];
-        const eB = r[j + 1];
-        if (eA.idx > eB.idx) {
-          r[j] = eB;
-          r[j + 1] = eA;
-          eA.idx += eB.typ === 'ins' ? 1 : -1;
-        } else if (eA.idx === eB.idx) {
-          
-          if (eA.typ === 'ins') {
-            if (eB.typ === 'ins') {
-              r[j] = eB;
-
+    let flag = true;
+    while (flag) {
+      flag = false;
+      for (let i = 0; i < r.length - 1; i += 1) {
+        const eA = r[i];
+        const eB = r[i + 1];
+        if (eA.typ === 'ins') {
+          if (eB.typ === 'ins') {
+            if (eA.idx >= eB.idx) {
+              r[i] = eB;
+              r[i + 1] = { ...eA, idx: eA.idx + 1};
+              flag = true;
             }
-
           } else {
-
+            if (eA.idx < eB.idx) {
+              r[i] = { ...eB, idx: eB.idx - 1 };
+              r[i + 1] = eA;
+            } else if (eA.idx > eB.idx) {
+              r[i] = eB;
+              r[i + 1] = { ...eA, idx: eA.idx - 1 };
+            } else if (equ(eA.val)(eB.val)) {
+              r.splice(i, 2);
+              i = Math.max(i - 2, -1);
+            } else {
+              return undefined;
+            }
+            flag = true;
           }
-
-
+        } else if (eB.typ === 'ins' && eA.idx === eB.idx && equ(eA.val)(eB.val)) {
+          r.splice(i, 2);
+          i = Math.max(i - 2, -1);
+          flag = true;
+        } else if (eB.typ === 'del' && eA.idx <= eB.idx) {
+          r[i] = { ...eB, idx: eB.idx + 1 };
+          r[i + 1] = eA;
+          flag = true;
         }
       }
     }
     return r;
-  };
-  const liftTran = (tranElem: (eA: Oplet<T>) => (eB: Oplet<T>) => List<Oplet<T>> | undefined): PartialBinaryOperator<List<Oplet<T>>> => {
-    const tran: PartialBinaryOperator<List<Oplet<T>>> = (a) => (b) => {
-      if (a === null) return null;
-      if (b === null) return a;
-
-    };
-    return tran;
   };
 
   return {
@@ -118,7 +123,7 @@ export const arrayDocument = <T>({ lt, equ }: Ordered<T>): DocumentMeta<Oplet<T>
         }))
         .reverse(),
     comp: (a) => (b) => rep([...a, ...b]),
-    tran: (a) => (b) => a, // TODO
+    tran: (a) => (/* b */) => a, // TODO
     equ: (a) => (b) => {
       if (a === b) return true;
       const rA = rep(a);
