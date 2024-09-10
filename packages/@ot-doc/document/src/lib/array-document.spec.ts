@@ -8,13 +8,49 @@ describeDocumentMeta('arrayDocument<number>', arrNum, {
     [],
     [{ typ: 'ins', idx: 0, val: 1 }],
     [{ typ: 'del', idx: 0, val: 1 }],
-    [{ typ: 'del', idx: 0, val: 1 }, { typ: 'ins', idx: 1, val: 2}],
-    [{ typ: 'ins', idx: 1, val: 2}, { typ: 'del', idx: 0, val: 1 }],
+    [
+      { typ: 'del', idx: 0, val: 1 },
+      { typ: 'ins', idx: 1, val: 2 },
+    ],
+    [
+      { typ: 'ins', idx: 1, val: 2 },
+      { typ: 'del', idx: 0, val: 1 },
+    ],
   ],
   composable3: [
-    [[], [{ typ: 'ins', idx: 1, val: 2}, { typ: 'del', idx: 0, val: 1 }], [{ typ: 'del', idx: 0, val: 2 }, { typ: 'ins', idx: 1, val: 2}]],
-    [[{ typ: 'ins', idx: 1, val: 2}, { typ: 'del', idx: 0, val: 1 }], [], [{ typ: 'del', idx: 0, val: 2 }, { typ: 'ins', idx: 1, val: 2}]],
-    [[{ typ: 'ins', idx: 1, val: 2}, { typ: 'del', idx: 0, val: 1 }], [{ typ: 'del', idx: 0, val: 2 }, { typ: 'ins', idx: 1, val: 2}], []],
+    [
+      [],
+      [
+        { typ: 'ins', idx: 1, val: 2 },
+        { typ: 'del', idx: 0, val: 1 },
+      ],
+      [
+        { typ: 'del', idx: 0, val: 2 },
+        { typ: 'ins', idx: 1, val: 2 },
+      ],
+    ],
+    [
+      [
+        { typ: 'ins', idx: 1, val: 2 },
+        { typ: 'del', idx: 0, val: 1 },
+      ],
+      [],
+      [
+        { typ: 'del', idx: 0, val: 2 },
+        { typ: 'ins', idx: 1, val: 2 },
+      ],
+    ],
+    [
+      [
+        { typ: 'ins', idx: 1, val: 2 },
+        { typ: 'del', idx: 0, val: 1 },
+      ],
+      [
+        { typ: 'del', idx: 0, val: 2 },
+        { typ: 'ins', idx: 1, val: 2 },
+      ],
+      [],
+    ],
   ],
   others({ comp, inv }) {
     // const a: Oplet<number>[] = [{ typ: 'ins', idx: 1, val: 2}, { typ: 'del', idx: 0, val: 1 }];
