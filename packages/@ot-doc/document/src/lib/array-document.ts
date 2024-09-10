@@ -69,46 +69,48 @@ export const arrayDocument = <T>({
   equ = (a) => (b) => a === b,
 }: Partial<Ordered<T>> = {}): DocumentMeta<Oplet<T>[]>  => {
   const rep = (a: Oplet<T>[]): Oplet<T>[] | undefined => {
-    const r = [...a];
-    let flag = true;
-    while (flag) {
-      flag = false;
-      for (let i = 0; i < r.length - 1; i += 1) {
-        const eA = r[i];
-        const eB = r[i + 1];
+    let r = a;
+    let i = 0;
+    let updated = false;
+    const update = (...ops: Oplet<T>[]): void => {
+      if (r === a) r = [...a];
+      r.splice(i, 2, ...ops);
+      i = i + ops.length - 1;
+      updated = true;
+    };
+
+    do {
+      updated = false;
+      i = 0;
+      while (i < r.length - 1) {
+        const [eA, eB] = r.slice(i, i + 2);
         if (eA.typ === 'ins') {
           if (eB.typ === 'ins') {
             if (eA.idx >= eB.idx) {
-              r[i] = eB;
-              r[i + 1] = { ...eA, idx: eA.idx + 1};
-              flag = true;
+              update(eB, { ...eA, idx: eA.idx + 1});
+            } else {
+              i += 1;
             }
           } else {
             if (eA.idx < eB.idx) {
-              r[i] = { ...eB, idx: eB.idx - 1 };
-              r[i + 1] = eA;
+              update({ ...eB, idx: eB.idx - 1 }, eA);
             } else if (eA.idx > eB.idx) {
-              r[i] = eB;
-              r[i + 1] = { ...eA, idx: eA.idx - 1 };
+              update(eB, { ...eA, idx: eA.idx - 1 });
             } else if (equ(eA.val)(eB.val)) {
-              r.splice(i, 2);
-              i = Math.max(i - 2, -1);
+              update();
             } else {
               return undefined;
             }
-            flag = true;
           }
         } else if (eB.typ === 'ins' && eA.idx === eB.idx && equ(eA.val)(eB.val)) {
-          r.splice(i, 2);
-          i = Math.max(i - 2, -1);
-          flag = true;
+          update()
         } else if (eB.typ === 'del' && eA.idx <= eB.idx) {
-          r[i] = { ...eB, idx: eB.idx + 1 };
-          r[i + 1] = eA;
-          flag = true;
+          update({ ...eB, idx: eB.idx + 1 }, eA);
+        } else {
+          i += 1;
         }
       }
-    }
+    } while (updated);
     return r;
   };
 
