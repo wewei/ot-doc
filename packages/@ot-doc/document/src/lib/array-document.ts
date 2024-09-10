@@ -70,7 +70,34 @@ type List<T> = {
 } | null;
 
 export const arrayDocument = <T>({ lt, equ }: Ordered<T>): DocumentMeta<Oplet<T>[]>  => {
-  const rep = (a: Oplet<T>[]): Oplet<T>[] | undefined => a; // TODO
+  const rep = (a: Oplet<T>[]): Oplet<T>[] | undefined => {
+    const r = [...a];
+    for (let i = r.length; i > 0; i -= 1) {
+      for (let j = 0; j < i - 1; j += 1) {
+        const eA = r[j];
+        const eB = r[j + 1];
+        if (eA.idx > eB.idx) {
+          r[j] = eB;
+          r[j + 1] = eA;
+          eA.idx += eB.typ === 'ins' ? 1 : -1;
+        } else if (eA.idx === eB.idx) {
+          
+          if (eA.typ === 'ins') {
+            if (eB.typ === 'ins') {
+              r[j] = eB;
+
+            }
+
+          } else {
+
+          }
+
+
+        }
+      }
+    }
+    return r;
+  };
   const liftTran = (tranElem: (eA: Oplet<T>) => (eB: Oplet<T>) => List<Oplet<T>> | undefined): PartialBinaryOperator<List<Oplet<T>>> => {
     const tran: PartialBinaryOperator<List<Oplet<T>>> = (a) => (b) => {
       if (a === null) return null;
