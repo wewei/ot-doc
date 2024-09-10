@@ -75,7 +75,7 @@ export const arrayDocument = <T>({
     const update = (...ops: Oplet<T>[]): void => {
       if (r === a) r = [...a];
       r.splice(i, 2, ...ops);
-      i = i + ops.length - 1;
+      i = Math.max(i + ops.length - 1, 0);
       updated = true;
     };
 
@@ -83,7 +83,8 @@ export const arrayDocument = <T>({
       updated = false;
       i = 0;
       while (i < r.length - 1) {
-        const [eA, eB] = r.slice(i, i + 2);
+        const eA = r[i];
+        const eB = r[i + 1];
         if (eA.typ === 'ins') {
           if (eB.typ === 'ins') {
             if (eA.idx >= eB.idx) {
@@ -143,3 +144,9 @@ export const arrayDocument = <T>({
     },
   };
 };
+
+export const insertAt = <T>(i: number, ...arr: T[]): Oplet<T>[] =>
+  arr.map((val, j) => ({ typ: 'ins', val, idx: i + j }));
+
+export const deleteAt = <T>(i: number, ...arr: T[]): Oplet<T>[] =>
+  arr.map((val, j): Oplet<T> => ({ typ: 'del', val, idx: i + j })).reverse();

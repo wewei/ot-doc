@@ -1,55 +1,41 @@
 import { describeDocumentMeta, DocumentTestCases } from "../util/test-utility";
-import { arrayDocument, Oplet } from "./array-document";
+import { arrayDocument, deleteAt, insertAt, Oplet } from "./array-document";
 
 const arrNum = arrayDocument<number>();
 
 describeDocumentMeta('arrayDocument<number>', arrNum, {
   singleton: [
     [],
-    [{ typ: 'ins', idx: 0, val: 1 }],
-    [{ typ: 'del', idx: 0, val: 1 }],
-    [
-      { typ: 'del', idx: 0, val: 1 },
-      { typ: 'ins', idx: 1, val: 2 },
-    ],
-    [
-      { typ: 'ins', idx: 1, val: 2 },
-      { typ: 'del', idx: 0, val: 1 },
-    ],
+    insertAt(0, 1),
+    deleteAt(0, 1),
+    [...deleteAt(0, 1), ...insertAt(1, 2)],
+    [...insertAt(1, 2), ...deleteAt(0, 1)],
   ],
   composable3: [
     [
       [],
-      [
-        { typ: 'ins', idx: 1, val: 2 },
-        { typ: 'del', idx: 0, val: 1 },
-      ],
-      [
-        { typ: 'del', idx: 0, val: 2 },
-        { typ: 'ins', idx: 1, val: 2 },
-      ],
+      [...insertAt(1, 2), ...deleteAt(0, 1)],
+      [...deleteAt(0, 2), ...insertAt(1, 2)],
     ],
     [
-      [
-        { typ: 'ins', idx: 1, val: 2 },
-        { typ: 'del', idx: 0, val: 1 },
-      ],
+      [...insertAt(1, 2), ...deleteAt(0, 1)],
       [],
-      [
-        { typ: 'del', idx: 0, val: 2 },
-        { typ: 'ins', idx: 1, val: 2 },
-      ],
+      [...deleteAt(0, 2), ...insertAt(1, 2)],
     ],
     [
-      [
-        { typ: 'ins', idx: 1, val: 2 },
-        { typ: 'del', idx: 0, val: 1 },
-      ],
-      [
-        { typ: 'del', idx: 0, val: 2 },
-        { typ: 'ins', idx: 1, val: 2 },
-      ],
+      [...insertAt(1, 2), ...deleteAt(0, 1)],
+      [...deleteAt(0, 2), ...insertAt(1, 2)],
       [],
+    ],
+    [
+      insertAt(0, 1, 2, 3),
+      insertAt(1, 4, 5),
+      insertAt(3, 6),
+    ],
+    [
+      insertAt(0, 0, 1, 2, 3),
+      deleteAt(2, 2, 3),
+      deleteAt(0, 0),
     ],
   ],
   others({ comp, inv }) {
