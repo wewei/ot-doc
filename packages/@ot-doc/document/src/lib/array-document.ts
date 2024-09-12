@@ -58,21 +58,23 @@
 import { Ordered } from "./algebra";
 import { DocumentMeta } from "./document-meta";
 
-export type Oplet<T> = {
+export type ArrayOplet<T> = {
   typ: 'ins' | 'del',
   idx: number,
   val: T,
 };
 
+export type ArrayOp<T> = ArrayOplet<T>[];
+
 export const arrayDocument = <T>({
   // lt = (a) => (b) => a < b,
   equ = (a) => (b) => a === b,
-}: Partial<Ordered<T>> = {}): DocumentMeta<Oplet<T>[]>  => {
-  const rep = (a: Oplet<T>[]): Oplet<T>[] | undefined => {
+}: Partial<Ordered<T>> = {}): DocumentMeta<ArrayOp<T>>  => {
+  const rep = (a: ArrayOp<T>): ArrayOp<T> | undefined => {
     let r = a;
     let i = 0;
     let updated = false;
-    const update = (...ops: Oplet<T>[]): void => {
+    const update = (...ops: ArrayOplet<T>[]): void => {
       if (r === a) r = [...a];
       r.splice(i, 2, ...ops);
       i = Math.max(i + ops.length - 1, 0);
@@ -119,7 +121,7 @@ export const arrayDocument = <T>({
     idn: [],
     inv: (a) =>
       a
-        .map(({ typ, idx, val }): Oplet<T> => ({
+        .map(({ typ, idx, val }): ArrayOplet<T> => ({
           typ: typ === 'ins' ? 'del' : 'ins',
           idx,
           val,
@@ -145,8 +147,50 @@ export const arrayDocument = <T>({
   };
 };
 
-export const insertAt = <T>(i: number, ...arr: T[]): Oplet<T>[] =>
+export const insertAt = <T>(i: number, ...arr: T[]): ArrayOp<T> =>
   arr.map((val, j) => ({ typ: 'ins', val, idx: i + j }));
 
-export const deleteAt = <T>(i: number, ...arr: T[]): Oplet<T>[] =>
-  arr.map((val, j): Oplet<T> => ({ typ: 'del', val, idx: i + j })).reverse();
+export const deleteAt = <T>(i: number, ...arr: T[]): ArrayOp<T> =>
+  arr.map((val, j): ArrayOplet<T> => ({ typ: 'del', val, idx: i + j })).reverse();
+
+export type CompactArrayOp<T> = Partial<{
+  del: { idx: number, arr: T[] }[],
+  ins: { idx: number, arr: T[] }[],
+}>;
+
+export function compact<T>(meta: DocumentMeta<ArrayOp<T>>): DocumentMeta<CompactArrayOp<T>> {
+  function compress(op: ArrayOp<T>): CompactArrayOp<T> | undefined {
+    const rep = meta.comp(op)(meta.idn);
+    if (!rep) return undefined;
+    return rep.reduce((m, { typ, idx, val }) => {
+      if (typ === 'del') {
+        m.del ??= [{ idx: idx + 1, arr: [] }];
+        const lastDel = m.del[m.del.length - 1];
+        if (lastDel.idx === idx + 1) {
+          lastDel.idx = idx;
+          lastDel.arr.unshift(val);
+        } else {
+          m.del.push({ idx, arr: [val] });
+        }
+      } else {
+        m.ins ??= [{ idx, arr: [] }];
+        const lastIns = m.ins[m.ins.length - 1];
+        if (lastIns.idx + lastIns.arr.length === idx) {
+          lastIns.arr.push(val);
+        } else {
+          m.ins.push({ idx, arr: [val]});
+        }
+      }
+      return m;
+    }, {} as CompactArrayOp<T>);
+  }
+
+
+  return {
+    idn: {},
+    inv: () => {},
+    comp: () => () => {},
+    tran: () => () => {},
+    equ: () => () => {},
+  };
+};

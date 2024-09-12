@@ -1,5 +1,5 @@
 import { describeDocumentMeta, DocumentTestCases } from "../util/test-utility";
-import { arrayDocument, deleteAt, insertAt, Oplet } from "./array-document";
+import { arrayDocument, deleteAt, insertAt, ArrayOplet } from "./array-document";
 
 const arrNum = arrayDocument<number>();
 
@@ -48,4 +48,4 @@ describeDocumentMeta('arrayDocument<number>', arrNum, {
     // const b_a = comp(b)(a);
     // console.log(JSON.stringify(b_a));
   },
-} as DocumentTestCases<Oplet<number>[]>);
+} as DocumentTestCases<ArrayOplet<number>[]>);
