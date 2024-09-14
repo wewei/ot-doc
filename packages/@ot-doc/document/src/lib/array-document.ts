@@ -185,12 +185,56 @@ export function compact<T>(meta: DocumentMeta<ArrayOp<T>>): DocumentMeta<Compact
     }, {} as CompactArrayOp<T>);
   }
 
+  function decompress(op: CompactArrayOp<T>): ArrayOp<T> | undefined {
+    return meta.comp(
+      (op.del ?? []).reduce((m, { idx, arr }) => {
+        m.concat(
+          arr
+            .map((val, i): ArrayOplet<T> => ({ typ: 'del', val, idx: idx + i }))
+            .reverse()
+        );
+        return m;
+      }, [] as ArrayOp<T>)
+    )(
+      (op.ins ?? []).reduce((m, { idx, arr }) => {
+        m.concat(
+          arr.map(
+            (val, i): ArrayOplet<T> => ({ typ: 'ins', val, idx: idx + i })
+          )
+        );
+        return m;
+      }, [] as ArrayOp<T>)
+    );
+  }
+
 
   return {
     idn: {},
-    inv: () => {},
-    comp: () => () => {},
-    tran: () => () => {},
-    equ: () => () => {},
+    inv: ({ ins, del }) => {
+      const r: CompactArrayOp<T> = {};
+      if (ins) {
+        r.del = [...ins].reverse();
+      }
+      if (del) {
+        r.ins = [...del].reverse();
+      }
+      return r;
+    },
+    comp: (a) => (b) => {
+      const dcA = decompress(a);
+      const dcB = decompress(b);
+      if (!dcA || !dcB) return undefined;
+      const dcC = meta.comp(dcA)(dcB);
+      if (!dcC) return undefined;
+      return compress(dcC);
+    },
+    tran: (a) => (/* b */) => a, // TODO
+    equ: (a) => (b) => {
+      if (a === b) return true;
+      const dcA = decompress(a);
+      const dcB = decompress(b);
+      if (dcA && dcB) return meta.equ(dcA)(dcB);
+      return dcA === dcB; // Iff both are undefined
+    },
   };
 };
