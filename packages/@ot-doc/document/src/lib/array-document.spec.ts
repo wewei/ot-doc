@@ -1,5 +1,5 @@
 import { describeDocumentMeta, DocumentTestCases } from "../util/test-utility";
-import { arrayDocument, deleteAt, insertAt, ArrayOplet } from "./array-document";
+import { arrayDocument, deleteAt, insertAt, ArrayOplet, compact } from "./array-document";
 
 const arrNum = arrayDocument<number>();
 
@@ -49,3 +49,33 @@ describeDocumentMeta('arrayDocument<number>', arrNum, {
     // console.log(JSON.stringify(b_a));
   },
 } as DocumentTestCases<ArrayOplet<number>[]>);
+
+
+const compactArrayNum = compact(arrNum);
+describeDocumentMeta('CompactArrayOp<number>', compactArrayNum, {
+  singleton: [
+    {},
+    {
+      ins: [
+        { idx: 0, arr: [1, 2, 3] },
+        { idx: 3, arr: [4, 5] },
+      ],
+    },
+    {
+      del: [
+        { idx: 3, arr: [4, 5] },
+        { idx: 0, arr: [1, 2, 3] },
+      ],
+    },
+    {
+      del: [
+        { idx: 3, arr: [4, 5] },
+        { idx: 0, arr: [1, 2, 3] },
+      ],
+      ins: [
+        { idx: 0, arr: [5, 4, 3] },
+        { idx: 3, arr: [2, 1] },
+      ],
+    },
+  ],
+});
