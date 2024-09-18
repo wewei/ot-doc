@@ -1,12 +1,27 @@
 import { $Eq } from "./algebra";
-import { $BaseDoc, $FullDoc, $Idn, $InvDoc } from "./document";
+import { $BaseDoc, $FullDoc, $InvDoc } from "./document";
 import { just, nothing } from "./maybe";
 
+export type Rec<T> = Record<string, T>;
+
+export const $eqRec = <T>({ equals }: $Eq<T>): $Eq<Rec<T>> => ({
+  equals: (recA) => (recB) => {
+    if (recA === recB) return true;
+    const keys = Object.keys(recA);
+    if (Object.keys(recB).length !== keys.length) return false;
+    for (const key of keys) {
+      if (!(key in recB) || !equals(recA[key])(recB[key])) return false;
+    }
+    return true;
+  },
+});
+
 export const $baseDocRecord =
-  <Cp>({ equals }: $Eq<Cp>) =>
-  <Op>({
+  <Cp, Op>({
     initial,
     compose,
+    cpEquals,
+    opEquals,
   }: $BaseDoc<Cp, Op>): $BaseDoc<Record<string, Cp>, Record<string, Op>> => {
     const cpI = initial();
 
@@ -24,11 +39,11 @@ export const $baseDocRecord =
             return nothing();
           }
           const { v: newCpK } = mNewCpK;
-          if (!equals(newCpK)(cpK)) {
+          if (!cpEquals(newCpK)(cpK)) {
             if (cpT.v === cp) {
               cpT.v = { ...cp };
             }
-            if (equals(newCpK)(cpI)) {
+            if (cpEquals(newCpK)(cpI)) {
               delete cpT.v[key];
             } else {
               cpT.v[key] = newCpK;
@@ -36,14 +51,16 @@ export const $baseDocRecord =
           }
           return cpT;
         }, just(cp)),
+      cpEquals: $eqRec({ equals: cpEquals }).equals,
+      opEquals: $eqRec({ equals: opEquals }).equals,
     };
   };
 
 export const $invDocRecord =
-  <Cp>({ equals }: $Eq<Cp>) =>
-  <Op>({ initial, compose, invert }: $InvDoc<Cp, Op>): $InvDoc<Record<string, Cp>, Record<string, Op>> => {
+  <Cp, Op>(clsDoc: $InvDoc<Cp, Op>): $InvDoc<Record<string, Cp>, Record<string, Op>> => {
+    const { invert } = clsDoc;
     return {
-      ...$baseDocRecord({ equals })({ initial, compose }),
+      ...$baseDocRecord(clsDoc),
       invert: (op) => Object.keys(op).reduce((opT, key) => {
         opT[key] = invert(op[key]);
         return opT;
@@ -52,13 +69,12 @@ export const $invDocRecord =
   };
 
 export const $fullDocRecord =
-  <Op>(clsOp: $Eq<Op> & $Idn<Op>) =>
-  <Cp>(clsCp: $Eq<Cp>) =>
-  ({ initial, compose, invert, transform }: $FullDoc<Cp, Op>): $FullDoc<Record<string, Cp>, Record<string, Op>> => {
-    const opI = clsOp.identity();
+  <Cp, Op>(clsDoc: $FullDoc<Cp, Op>): $FullDoc<Record<string, Cp>, Record<string, Op>> => {
+    const { transform, identity, opEquals } = clsDoc;
+    const opI = identity();
 
     return {
-      ...$invDocRecord(clsCp)({ initial, compose, invert }),
+      ...$invDocRecord(clsDoc),
       identity: () => ({}),
       transform: (opA) => (opB) => Object.keys(opA).reduce((mOpT, key) => {
         if (mOpT.$ === 'Nothing' || !(key in opB)) {
@@ -71,11 +87,11 @@ export const $fullDocRecord =
           return nothing();
         }
         const { v: newOpKA } = mNewOpKA;
-        if (!clsOp.equals(newOpKA)(opKA)) {
+        if (!opEquals(newOpKA)(opKA)) {
           if (mOpT.v === opA) {
             mOpT.v = { ...opA };
           }
-          if (clsOp.equals(newOpKA)(opI)) {
+          if (opEquals(newOpKA)(opI)) {
             delete mOpT.v[key];
           } else {
             mOpT.v[key] = newOpKA;

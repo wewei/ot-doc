@@ -1,4 +1,4 @@
-import { Constant, PartialBinaryOperator, PartialUnaryOperator, UnaryOperator } from "./algebra";
+import { Constant, PartialBinaryOperator, PartialUnaryOperator, Relation, UnaryOperator } from "./algebra";
 
 export type $Init<Cp> = {
   initial: Constant<Cp>;
@@ -24,7 +24,10 @@ export type $Tran<Op> = {
   transform: PartialBinaryOperator<Op>;
 };
 
-export type $BaseDoc<Cp, Op> = $Init<Cp> & $Comp<Cp, Op>;
+export type $BaseDoc<Cp, Op> = $Init<Cp> & $Comp<Cp, Op> & {
+  cpEquals: Relation<Cp>;
+  opEquals: Relation<Op>;
+};
 
 export type $InvDoc<Cp, Op> = $BaseDoc<Cp, Op> & $Inv<Op>;
 

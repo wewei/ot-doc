@@ -28,6 +28,8 @@ export const $invDocUpdate = <A>({
   compose:
     (op) => op ? ((v) => equals(v)(op.f) ? just(op.t) : nothing()) : just,
   invert: op => op ? { f: op.t, t: op.f } : null,
+  cpEquals: equals,
+  opEquals: $eqUpdate({ equals }).equals,
 });
 
 // Greater Write Win
