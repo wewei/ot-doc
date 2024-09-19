@@ -13,6 +13,14 @@ export type $Eq<T> = {
   equals: Relation<T>;
 };
 
+export const $eqPrime = <T>(): $Eq<T> => ({
+  equals: (a) => (b) => a === b
+});
+
 export type $Ord<T> = {
   lessThan: Relation<T>;
 };
+
+export const $ordPrime = <T>(): $Ord<T> => ({
+  lessThan: (a) => (b) => a < b,
+})

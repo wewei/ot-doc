@@ -71,15 +71,23 @@ const mapMaybe = <
 
 export const $eqStt = <T extends Record<string, unknown>>(
   stt$eq: Stt$Eq<T>
+): $Eq<T> => ({
+  equals: (sttA) => (sttB) => {
+    if (sttA === sttB) return true;
+    const keys: (keyof T)[] = Object.keys(stt$eq);
+    for (const key of keys)
+      if (!stt$eq[key].equals(sttA[key])(sttB[key])) return false;
+    return true;
+  },
+});
+
+
+export const $eqPartialStt = <T extends Record<string, unknown>>(
+  stt$eq: Stt$Eq<T>
 ): $Eq<Partial<T>> => ({
   equals: (sttA) => (sttB) => {
-    if (sttA === sttB) {
-      return true;
-    }
-    const keys = Object.keys(sttA);
-    if (Object.keys(sttB).length !== keys.length) {
-      return false;
-    }
+    if (sttA === sttB) return true;
+    const keys: (keyof T)[] = Object.keys(stt$eq);
     for (const key of keys) {
       const valA = sttA[key];
       const valB = sttB[key];
@@ -87,7 +95,7 @@ export const $eqStt = <T extends Record<string, unknown>>(
       if (
         valA === undefined ||
         valB === undefined ||
-        !stt$eq[key].equals(valA)(valB)
+        !stt$eq[key].equals(valA as T[typeof key])(valB as T[typeof key])
       )
         return false;
     }
@@ -101,7 +109,7 @@ export const $eqCp = <
 >(
   stt$baseDoc: Stt$BaseDoc<Cp, Op>
 ): $Eq<Partial<Cp>> =>
-  $eqStt(
+  $eqPartialStt(
     mapValues(
       stt$baseDoc,
       <K extends keyof Cp>({ cpEquals }: $BaseDoc<Cp[K], Op[K]>) => ({
@@ -116,7 +124,7 @@ export const $eqOp = <
 >(
   stt$baseDoc: Stt$BaseDoc<Cp, Op>
 ): $Eq<Partial<Op>> =>
-  $eqStt(
+  $eqPartialStt(
     mapValues(
       stt$baseDoc,
       <K extends keyof Cp>({ opEquals }: $BaseDoc<Cp[K], Op[K]>) => ({
