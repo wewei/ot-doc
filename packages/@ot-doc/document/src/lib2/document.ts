@@ -24,11 +24,11 @@ export type $Tran<Op> = {
   transform: PartialBinaryOperator<Op>;
 };
 
-export type $BaseDoc<Cp, Op> = $Init<Cp> & $Comp<Cp, Op> & {
+export type $BaseDoc<Cp, Op> = $Init<Cp> & $Idn<Op> & $Comp<Cp, Op> & {
   cpEquals: Relation<Cp>;
   opEquals: Relation<Op>;
 };
 
 export type $InvDoc<Cp, Op> = $BaseDoc<Cp, Op> & $Inv<Op>;
 
-export type $FullDoc<Cp, Op> = $InvDoc<Cp, Op> & $Idn<Op> & $Tran<Op>;
+export type $FullDoc<Cp, Op> = $InvDoc<Cp, Op> & $Tran<Op>;

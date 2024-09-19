@@ -1,5 +1,5 @@
 import { $Eq } from "./algebra";
-import { $BaseDoc, $FullDoc, $InvDoc } from "./document";
+import { $BaseDoc, $FullDoc, $InvDoc, $idn, $init } from "./document";
 import { just, nothing } from "./maybe";
 
 export type Rec<T> = Record<string, T>;
@@ -10,7 +10,15 @@ export const $eqRec = <T>({ equals }: $Eq<T>): $Eq<Rec<T>> => ({
     const keys = Object.keys(recA);
     if (Object.keys(recB).length !== keys.length) return false;
     for (const key of keys) {
-      if (!(key in recB) || !equals(recA[key])(recB[key])) return false;
+      const valA = recA[key];
+      const valB = recB[key];
+      if (valA === valB) continue;
+      if (
+        valA === undefined ||
+        valB === undefined ||
+        !equals(recA[key])(recB[key])
+      )
+        return false;
     }
     return true;
   },
@@ -26,7 +34,8 @@ export const $baseDocRecord =
     const cpI = initial();
 
     return {
-      initial: () => ({}),
+      ...$init({}),
+      ...$idn({}),
       compose: (op) => (cp) =>
         Object.keys(op).reduce((cpT, key) => {
           if (cpT.$ === 'Nothing') {
@@ -75,7 +84,6 @@ export const $fullDocRecord =
 
     return {
       ...$invDocRecord(clsDoc),
-      identity: () => ({}),
       transform: (opA) => (opB) => Object.keys(opA).reduce((mOpT, key) => {
         if (mOpT.$ === 'Nothing' || !(key in opB)) {
           return mOpT;

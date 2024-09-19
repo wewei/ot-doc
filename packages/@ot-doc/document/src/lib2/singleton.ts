@@ -25,6 +25,7 @@ export const $invDocUpdate = <A>({
   initial,
 }: $Eq<A> & $Init<A>): $InvDoc<A, Update<A>> => ({
   initial,
+  ...$idn(null),
   compose:
     (op) => op ? ((v) => equals(v)(op.f) ? just(op.t) : nothing()) : just,
   invert: op => op ? { f: op.t, t: op.f } : null,
@@ -40,7 +41,6 @@ export const $fullDocGww = <A>({
   lessThan,
 }: $Eq<A> & $Init<A> & $Ord<A>): $FullDoc<A, Update<A>> => ({
   ...$invDocUpdate({ equals, initial }),
-  ...$idn(null),
   transform: (opA) => (opB) => {
     if (!opA) return just(null);
     if (!opB) return just(opA);
