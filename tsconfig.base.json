@@ -17,7 +17,8 @@
     "paths": {
       "@ot-doc/algebra": ["packages/@ot-doc/algebra/src/index.ts"],
       "@ot-doc/document": ["packages/@ot-doc/document/src/index.ts"],
-      "@ot-doc/list": ["packages/@ot-doc/list/src/index.ts"]
+      "@ot-doc/list": ["packages/@ot-doc/list/src/index.ts"],
+      "@ot-doc/model": ["packages/@ot-doc/model/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
