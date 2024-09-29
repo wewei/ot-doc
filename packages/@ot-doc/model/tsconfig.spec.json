@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "declaration": true,
     "outDir": "../../../dist/out-tsc",
     "types": [
       "vitest/globals",
@@ -8,11 +9,13 @@
       "vite/client",
       "node",
       "vitest"
-    ]
+    ],
+    "composite": true
   },
   "include": [
     "vite.config.ts",
     "vitest.config.ts",
+    "src/**/*.ts",
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "src/**/*.test.tsx",
