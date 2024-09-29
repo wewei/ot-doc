@@ -1,0 +1,1 @@
+export const genName = () => Math.random().toString(36).padEnd(10, '0').slice(2, 10);
