@@ -1,4 +1,4 @@
-import { Maybe, just, nothing } from "./maybe";
+import { Maybe, isNothing, just, nothing } from "./maybe";
 import { BehaviorDef } from "./behavior";
 import { $Var } from "./variables";
 import { Action, ObjectOp, Op, Prim } from "./operation";
@@ -57,11 +57,11 @@ const editable: BehaviorDef<Editable, Eq & Preset> = {
         return reduceDict(
           op,
           (m, opVal, key) => {
-            if (m.$ === 'Nothing' || !opVal || typeof key !== 'string')
+            if (isNothing(m) || !opVal || typeof key !== 'string')
               return m;
             const valOld = dictOld[key] ?? preset;
             const mResult = update(constant(opVal))(valOld);
-            if (mResult.$ === 'Nothing') return nothing();
+            if (isNothing(mResult)) return mResult;
             const { value } = mResult.v;
             if (!eq(dictOld[key])(value)) {
               if (m.v.value === dictOld) {
@@ -85,9 +85,9 @@ const editable: BehaviorDef<Editable, Eq & Preset> = {
       return reduceStruct(
         sttOld,
         <K extends keyof S>(m: Maybe<Result<S>>, valOld: S[K], key: K) => {
-          if (m.$ === 'Nothing' || !opObj[key]) return m;
+          if (isNothing(m) || !opObj[key]) return m;
           const mResult = sttDoc[key].update(constant(opObj[key]))(valOld);
-          if (mResult.$ === 'Nothing') return nothing();
+          if (isNothing(mResult)) return mResult;
           const { value } = mResult.v;
           if (!sttDoc[key].eq(valOld)(value)) {
             if (m.v.value === sttOld) {
