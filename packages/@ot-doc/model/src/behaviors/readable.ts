@@ -1,8 +1,9 @@
 import { BehaviorDef } from './behavior';
 import { $Var } from './hkt';
-import { $Struct, Dict, mapDict, mapStruct } from './struct';
+import { $Struct, AnyDict, Dict, mapDict, mapStruct, reduceDict } from './struct';
 import { Preset } from './preset';
 import { Signatured } from './signatured';
+import { Eq } from './eq';
 
 export type Readable<T> = (
   raise: (path: string) => (message: string) => void,
@@ -34,7 +35,7 @@ const withReadPrim = <T extends string | number | boolean>({
     return preset;
   });
 
-const readable: BehaviorDef<Read, Preset & Signatured> = {
+const readable: BehaviorDef<Read, Preset & Signatured & Eq> = {
   $string: withReadPrim,
   $number: withReadPrim,
   $boolean: withReadPrim,
@@ -50,15 +51,19 @@ const readable: BehaviorDef<Read, Preset & Signatured> = {
       }),
   $dict:
     ({ preset, signature }) =>
-    ({ read }) =>
+    ({ read, preset: presetV, eq }) =>
       withRead((raise) => (u) => {
         if (typeof u !== 'object' || !u) {
           raise('')(`requires ${signature}`);
           return preset;
         }
-        return mapDict(u as Dict<unknown>, (v, key) =>
-          read((path) => raise(`.${key}${path}`))(v),
-        );
+        return reduceDict(u as Dict<unknown>, (m, v, key) => {
+          const val = read((path) => raise(`.${key}${path}`))(v);
+          if (!eq(val)(presetV)) {
+            m[key] = val;
+          }
+          return m;
+        }, {} as AnyDict);
       }),
   $struct:
     ({ preset, signature }) =>
