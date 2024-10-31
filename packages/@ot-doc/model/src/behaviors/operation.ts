@@ -25,7 +25,7 @@ export type ArrayOplet<T> = { i: number; a: T[] };
  * @param d deletions
  * @param i insertions
  */
-export type ArrayOp<T> = { d: ArrayOplet<T>[]; i: ArrayOplet<T>[] };
+export type ArrayOp<T> = Partial<{ d: ArrayOplet<T>[]; i: ArrayOplet<T>[] }>;
 
 /**
  * Struct op

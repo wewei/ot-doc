@@ -113,10 +113,12 @@ describe('Readable behavior', () => {
   describe('readData function', () => {
     it('should read data following the schema and report errors', () => {
       const stt = $struct({
-        points: $array($struct({
-          x: $number,
-          y: $number,
-        })),
+        points: $array(
+          $struct({
+            x: $number,
+            y: $number,
+          })
+        ),
         gradient: $struct({
           start: $string,
           middle: $string,
@@ -125,7 +127,11 @@ describe('Readable behavior', () => {
       });
       const report = vi.fn();
       const input = {
-        points: [{ x: 1, y: 2}, { x: 3, y: 4}, { x: 'foo', y: 5, z: 6 }],
+        points: [
+          { x: 1, y: 2 },
+          { x: 3, y: 4 },
+          { x: 'foo', y: 5, z: 6 },
+        ],
         gradient: {
           start: 'red',
           middle: 'blue',
@@ -133,21 +139,24 @@ describe('Readable behavior', () => {
         },
       };
       const output = {
-        points: [{ x: 1, y: 2}, { x:3, y: 4}, {x: 0, y: 5}],
+        points: [
+          { x: 1, y: 2 },
+          { x: 3, y: 4 },
+          { x: 0, y: 5 },
+        ],
         gradient: {
           start: 'red',
           middle: 'blue',
           end: '',
         },
       };
-      
+
       expect(readData(stt)(input)).toEqual(output);
       expect(readData(stt)(input, report)).toEqual(output);
       expect(report).toHaveBeenCalledTimes(2);
-      expect(report).toHaveBeenCalledWith("requires number, at $.points[2].x");
-      expect(report).toHaveBeenCalledWith("requires string, at $.gradient.end");
+      expect(report).toHaveBeenCalledWith('requires number, at $.points[2].x');
+      expect(report).toHaveBeenCalledWith('requires string, at $.gradient.end');
       report.mockClear();
     });
   });
 });
-

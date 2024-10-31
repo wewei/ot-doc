@@ -1,6 +1,6 @@
 import { BehaviorDef } from './behavior';
 import { $Var } from './hkt';
-import { $Struct, AnyDict, Dict, mapDict, mapStruct, reduceDict } from './struct';
+import { $Struct, AnyDict, Dict, mapStruct, reduceDict } from './struct';
 import { Preset } from './preset';
 import { Signatured } from './signatured';
 import { Eq } from './eq';
