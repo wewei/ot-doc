@@ -76,4 +76,59 @@ describe('Editable behavior', () => {
     ).toEqual(nothing());
   });
 
+  it('should edit the dict correctly', () => {
+    const dict = $dict($number);
+    expect(
+      dict.update(() => ({
+        Foo: { o: 0, n: 1, t: 0 },
+      }))({}).value
+    ).toEqual(just({ Foo: 1 }));
+
+    expect(
+      dict.update(() => ({
+        Foo: { o: 1, n: 0, t: 0 },
+      }))({ Foo: 1 }).value
+    ).toEqual(just({}));
+  });
+
+  it('should reject if the action conflicts with the current dict', () => {
+    const dict = $dict($number);
+    expect(
+      dict.update(() => ({
+        Foo: { o: 1, n: 0, t: 0 },
+        Bar: { o: 0, n: 1, t: 0 },
+      }))({}).value
+    ).toEqual(nothing());
+  });
+
+  it('should edit the struct correctly', () => {
+    const stt = $struct({
+      Foo: $number,
+      Bar: $string,
+    });
+    expect(
+      stt.update(() => ({
+        Foo: { o: 1, n: 0, t: 0 },
+      }))({
+        Foo: 1,
+        Bar: 'Hello',
+      }).value
+    ).toEqual(just({ Foo: 0, Bar: 'Hello' }));
+  });
+
+  it('should reject if the action conflicts with the curretn struct', () => {
+    const stt = $struct({
+      Foo: $number,
+      Bar: $string,
+    });
+    expect(
+      stt.update(() => ({
+        Foo: { o: 1, n: 0, t: 0 },
+        Bar: { o: '', n: 'World', t: 0 },
+      }))({
+        Foo: 1,
+        Bar: 'Hello',
+      }).value
+    ).toEqual(nothing());
+  });
 });
